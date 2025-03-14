@@ -72,28 +72,14 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             content.append(Paragraph(f"Your Personalized Meal Plan", title_style))
             content.append(Spacer(1, 12))
 
-            # Try to add images if they exist
-            try:
-                food_image_path = os.path.join('assets', 'meal icon.jpg')
-                plate_icon_path = os.path.join('assets', 'plate icon.jpg')
-
-                if os.path.exists(food_image_path):
-                    food_img = Image(food_image_path, width=400, height=200)
-                    content.append(food_img)
-                    content.append(Spacer(1, 12))
-                else:
-                    logger.warning(f"Food image not found at {food_image_path}")
-
-                if os.path.exists(plate_icon_path):
-                    plate_img = Image(plate_icon_path, width=50, height=50)
-                    content.append(plate_img)
-                    content.append(Spacer(1, 12))
-                else:
-                    logger.warning(f"Plate icon not found at {plate_icon_path}")
-
-            except Exception as img_error:
-                logger.warning(f"Error adding images to PDF: {str(img_error)}")
-                # Continue without images
+            # Add meal icon at the top
+            meal_icon_path = os.path.join('assets', 'meal icon.jpg')
+            if os.path.exists(meal_icon_path):
+                meal_img = Image(meal_icon_path, width=144, height=72)  # 2x1 inches (72 points per inch)
+                content.append(meal_img)
+                content.append(Spacer(1, 12))
+            else:
+                logger.warning(f"Meal icon not found at {meal_icon_path}")
 
             # Parse the meal plan text into sections
             sections = meal_plan_text.split('\n\n')
@@ -126,7 +112,14 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                         ]))
                         content.append(table)
                         content.append(Spacer(1, 12))
-                    elif any(keyword in section for keyword in ["Meal", "Micronutrients"]):
+                    elif "Meal" in section:
+                        # Add plate icon before meal sections
+                        plate_icon_path = os.path.join('assets', 'plate icon.jpg')
+                        if os.path.exists(plate_icon_path):
+                            plate_img = Image(plate_icon_path, width=36, height=36)  # 0.5x0.5 inches
+                            content.append(plate_img)
+                            content.append(Spacer(1, 6))
+
                         # Add section heading
                         heading = section.split('\n')[0]
                         content.append(Paragraph(heading, heading_style))
