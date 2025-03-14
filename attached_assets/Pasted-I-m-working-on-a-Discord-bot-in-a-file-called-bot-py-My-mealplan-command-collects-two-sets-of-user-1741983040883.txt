@@ -1,0 +1,15 @@
+I’m working on a Discord bot in a file called bot.py. My /mealplan command collects two sets of user inputs using await ctx.send and bot.wait_for, then generates a PDF using the reportlab library. The current PDF is plain and doesn’t look professional. I want to enhance it to match the clean, structured layout of my /rift_taps command (which has a title and blue section headers) and add specific features. Please update the /mealplan command in bot.py to apply the following changes:
+
+1. Set the PDF name to "Meal Plan for [Name].pdf", where [Name] is the first input (e.g., "Meal Plan for Ishrak.pdf").
+2. Structure the PDF with these sections, using the reportlab library:
+   - Title: "Meal Plan for [Name]" at the top.
+   - Section 1: "Total Daily Macronutrients" with a light blue background, displayed as a table with black borders (columns: "Nutrient" and "Amount", rows for Protein, Carbs, Fats).
+   - Section 2: "Meals" with a light blue background for the header, listing meals (e.g., Iftar, Snack) with red bullet points for each meal’s items and macronutrients.
+   - Section 3: "Total Micronutrients" with a light blue background, using red bullet points for each micronutrient.
+   - Section 4: "Tips for Success" with a light blue background, including 3 red bullet points: "Stay hydrated during non-fasting hours.", "Prioritize protein at Suhoor and Iftar.", "Adjust portions based on energy levels."
+   - Footer: "Feel free to ask questions about your meal plan!" in italic blue text.
+3. Add a gradient background to the entire PDF, transitioning from light grey at the top to white at the bottom.
+4. Add images: a "food_image.jpg" at the top (2 inches wide, 1 inch tall) and a "plate_icon.jpg" before each meal (0.5 inches wide, 0.5 inches tall). I’ve uploaded these images to my Replit project.
+5. Ensure the meal plan data (macros, meals, micros) is based on the user inputs: First: "Ishrak, Male, 30, 160 lbs, 5'6, Cut, Halal, None", Second: "3 months, 10,000 steps, Active, None, Yes, 9am-5pm, 4 meals, 20%". Use placeholder data (e.g., Protein: 150g, Carbs: 200g, Fats: 60g) if the current logic doesn’t generate it yet.
+
+Keep the input collection part (two await ctx.send and bot.wait_for steps) the same. Make sure the bot sends the PDF to Discord using await ctx.send(file=discord.File(pdf_name)). Check the console for errors (e.g., missing images, import issues) and let me know if there are any problems.
