@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 import logging
 from utils.assistant import AssistantManager
@@ -14,37 +15,41 @@ class Commands(commands.Cog):
         self.bot = bot
         self.assistant = AssistantManager()
 
-    async def _get_or_create_thread(self, message, name):
+    async def _get_or_create_thread(self, interaction, name):
         """Create a new thread or get existing one"""
         # Find existing threads owned by the user
-        existing_threads = [t for t in message.channel.threads if t.owner_id == message.author.id]
+        existing_threads = [t for t in interaction.channel.threads if t.owner_id == interaction.user.id]
         if existing_threads:
             return existing_threads[0]
-        return await message.channel.create_thread(name=name)
+        return await interaction.channel.create_thread(name=name)
 
-    @commands.command(name='help')
-    async def help_command(self, ctx):
+    @app_commands.command(name='help', description='Show available commands and usage information')
+    async def help_command(self, interaction: discord.Interaction):
         help_text = ("Commands: /help, /rift_taps, /mealplan, !ask <question>. "
                     "Chat in threads! Note: I don't have web search access.")
-        await ctx.send(help_text)
+        await interaction.response.send_message(help_text)
 
-    @commands.command(name='rift_taps')
-    async def rift_taps(self, ctx):
-        thread = await self._get_or_create_thread(ctx.message, f"RIFT-TAPS-{ctx.author.name}")
+    @app_commands.command(name='rift_taps', description='Learn about the RIFT & TAPS methodology')
+    async def rift_taps(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        thread = await self._get_or_create_thread(interaction, f"RIFT-TAPS-{interaction.user.name}")
         response = await self.assistant.explain_rift_taps()
         await thread.send(response)
+        await interaction.followup.send("Created a new thread for RIFT & TAPS explanation!")
 
-    @commands.command(name='mealplan')
-    async def mealplan(self, ctx):
-        thread = await self._get_or_create_thread(ctx.message, f"Meal-Plan-{ctx.author.name}")
+    @app_commands.command(name='mealplan', description='Get a personalized Ramadan meal plan')
+    async def mealplan(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        thread = await self._get_or_create_thread(interaction, f"Meal-Plan-{interaction.user.name}")
 
         # Ask for user details
         prompt = ("Answer: Weight (lbs), Height (ft'in or inches), Goal (cut/bulk/maintain), "
                  "Diet (e.g., halal), Allergies?")
         await thread.send(prompt)
+        await interaction.followup.send("Created a new thread for your meal plan! Please provide your details in the thread.")
 
         def check(m):
-            return m.author == ctx.author and m.channel == thread
+            return m.author == interaction.user and m.channel == thread
 
         try:
             response = await self.bot.wait_for('message', timeout=300.0, check=check)
@@ -83,9 +88,10 @@ class Commands(commands.Cog):
             logger.error(f"Error in mealplan command: {e}")
             await thread.send("An error occurred. Please try again.")
 
-    @commands.command(name='ask')
-    async def ask(self, ctx, *, question):
-        thread = await self._get_or_create_thread(ctx.message, f"Question-{ctx.author.name}")
+    @app_commands.command(name='ask', description='Ask a question about bodybuilding during Ramadan')
+    async def ask(self, interaction: discord.Interaction, *, question: str):
+        await interaction.response.defer()
+        thread = await self._get_or_create_thread(interaction, f"Question-{interaction.user.name}")
 
         # Check if question requires web access
         web_keywords = ['today', 'current', '2024', '2025', 'this year', 'next year']
@@ -98,6 +104,7 @@ class Commands(commands.Cog):
                         "this is my best answer. For current info, please check online!")
 
         await thread.send(response)
+        await interaction.followup.send("Created a new thread for your question! Check the response there.")
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))

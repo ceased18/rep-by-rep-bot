@@ -19,19 +19,46 @@ class RamadanBot(commands.Bot):
         super().__init__(
             command_prefix=['/', '!'],
             intents=intents,
-            help_command=None
+            help_command=None,
+            application_id=os.getenv('APPLICATION_ID')  # Add application ID
         )
         # Store thread mappings
         self.thread_mappings = {}
-        
+
     async def setup_hook(self):
-        # Load cogs
+        # Load cogs first
         await self.load_extension("cogs.commands")
         await self.load_extension("cogs.events")
-        
+
+        # Sync commands
+        try:
+            logger.info("Syncing slash commands...")
+            synced = await self.tree.sync()
+            logger.info(f"Slash commands synced successfully! Synced {len(synced)} command(s)")
+        except Exception as e:
+            logger.error(f"Failed to sync commands: {str(e)}")
+            raise
+
     async def on_ready(self):
         logger.info(f'Logged in as {self.user.name}')
         await self.change_presence(activity=discord.Game(name="Type /help"))
+
+        # Generate invite link
+        permissions = discord.Permissions(
+            view_channel=True,
+            send_messages=True,
+            create_public_threads=True,
+            send_messages_in_threads=True,
+            manage_messages=True,
+            add_reactions=True,
+            mention_everyone=True
+        )
+        invite_link = discord.utils.oauth_url(
+            self.user.id,
+            permissions=permissions,
+            scopes=["bot", "applications.commands"]  # Add both scopes
+        )
+        logger.info(f'Invite link: {invite_link}')
 
 def main():
     # Get environment variables
