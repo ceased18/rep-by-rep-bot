@@ -4,9 +4,10 @@ from discord.ext import commands
 import logging
 from utils.assistant import AssistantManager
 from utils.message_utils import send_long_message
+from utils.pdf_generator import generate_meal_plan_pdf
 import asyncio
-import re
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.assistant = AssistantManager()
-        self.bot.thread_mappings = {} # Initialize thread mapping
+        self.bot.thread_mappings = {}  # Initialize thread mapping
 
     async def _get_or_create_thread(self, interaction, name):
         """Create a new thread or get existing one"""
@@ -34,7 +35,7 @@ class Commands(commands.Cog):
 
     @app_commands.command(name='help', description='Show available commands and usage information')
     async def help_command(self, interaction: discord.Interaction):
-        help_text = ("Commands: /help, /rift_taps, !ask <question>. "
+        help_text = ("Commands: /help, /rift_taps, /mealplan, !ask <question>. "
                     "Chat in threads! Note: I don't have web search access.")
         await interaction.response.send_message(help_text)
 
@@ -90,6 +91,119 @@ class Commands(commands.Cog):
         await send_long_message(thread, response)
         await thread.send("\nFeel free to ask follow-up questions! I'm here to help! 💪")
         await interaction.followup.send(f"Created a thread for your question. Check {thread.mention}! 🤔")
+
+    @app_commands.command(name='mealplan', description='Get a personalized Ramadan meal plan')
+    async def mealplan(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        # Create thread for meal plan
+        thread_name = f"Meal Plan for {interaction.user.name}"
+        thread = await self._get_or_create_thread(interaction, thread_name)
+        logger.info(f"Created meal plan thread: {thread_name}")
+
+        try:
+            # Send initial questions
+            initial_questions = ("Let's create your personalized meal plan 📝\n"
+                               "Answer these and separate by a comma:\n"
+                               "- Name\n"
+                               "- Gender (male/female)\n"
+                               "- Age\n"
+                               "- Weight (lbs)\n"
+                               "- Height (ft'in ex. 5'10)\n"
+                               "- Goal (cut/bulk/maintain)\n"
+                               "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
+                               "- Allergies?")
+            await thread.send(initial_questions)
+            await interaction.followup.send(f"Created a thread for your meal plan! Check {thread.mention}")
+
+            def check(m):
+                return m.author == interaction.user and m.channel == thread
+
+            # Get first response
+            response = await self.bot.wait_for('message', timeout=300.0, check=check)
+            first_input = [item.strip() for item in response.content.split(',')]
+            logger.info(f"Parsed first input: {first_input}")
+
+            if len(first_input) < 8:
+                await thread.send("Please provide all required information and separate by commas.")
+                return
+
+            # Send follow-up questions
+            followup_questions = ("Great! To make a really good meal plan can you also answer these:\n"
+                                "- Duration of meal plan in months for your goals (ex. 5 months)\n"
+                                "- Daily activity (ex. 10,000 steps or 30 mins cardio)\n"
+                                "- Job Physical Demand (Active or Sedentary)\n"
+                                "- Health conditions or eating disorders\n"
+                                "- Previous experience with meal plans? (yes or no)\n"
+                                "- Your schedule?\n"
+                                "- Number of meals you want?\n"
+                                "- Body Fat Percentage")
+            await thread.send(followup_questions)
+
+            # Get second response
+            response = await self.bot.wait_for('message', timeout=300.0, check=check)
+            second_input = [item.strip() for item in response.content.split(',')]
+            logger.info(f"Parsed second input: {second_input}")
+
+            if len(second_input) < 8:
+                await thread.send("Please provide all required information and separate by commas.")
+                return
+
+            # Convert height to inches
+            height = first_input[4]
+            if "'" in height:
+                ft, inches = height.split("'")
+                height_inches = int(ft) * 12 + int(inches.replace('"', ''))
+            else:
+                height_inches = int(height)
+
+            # Prepare user data
+            user_data = {
+                'name': first_input[0],
+                'gender': first_input[1],
+                'age': int(first_input[2]),
+                'weight': float(first_input[3]),
+                'height': height_inches,
+                'goal': first_input[5],
+                'diet': first_input[6],
+                'allergies': first_input[7],
+                'duration': second_input[0],
+                'activity': second_input[1],
+                'job_demand': second_input[2],
+                'health_conditions': second_input[3],
+                'experience': second_input[4],
+                'schedule': second_input[5],
+                'meals_count': second_input[6],
+                'body_fat': second_input[7]
+            }
+
+            await thread.send("Generating your personalized meal plan... 🔄")
+
+            # Generate meal plan using Assistant
+            openai_thread_id, meal_plan = await self.assistant.generate_meal_plan(user_data)
+            self.bot.thread_mappings[thread.id] = openai_thread_id
+
+            try:
+                # Generate PDF
+                pdf_path = generate_meal_plan_pdf(meal_plan, user_data['name'])
+                await thread.send(file=discord.File(pdf_path))
+                os.remove(pdf_path)  # Clean up
+
+                # Send meal plan text and encourage questions
+                await send_long_message(thread, meal_plan)
+                await thread.send("\nFeel free to ask questions about your meal plan! 🍽️")
+
+            except Exception as pdf_error:
+                logger.error(f"Error generating PDF: {str(pdf_error)}")
+                await thread.send("I encountered an error generating the PDF. Here's your meal plan in text format:")
+                await send_long_message(thread, meal_plan)
+
+        except asyncio.TimeoutError:
+            await thread.send("Response time exceeded. Please try again.")
+        except Exception as e:
+            logger.error(f"Error in mealplan command: {str(e)}")
+            await thread.send("An error occurred while creating your meal plan. Please try again.")
+
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
