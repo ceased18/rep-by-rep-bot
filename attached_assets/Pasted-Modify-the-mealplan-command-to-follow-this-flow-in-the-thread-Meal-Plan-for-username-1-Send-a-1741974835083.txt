@@ -1,0 +1,27 @@
+Modify the /mealplan command to follow this flow in the thread "Meal Plan for [username]":
+1. Send an initial message: "Let’s create your personalized meal plan 📝\nAnswer these and separate by a comma" followed by these questions in bullet points:
+   - Name
+   - Gender (male/female)
+   - Age
+   - Weight (lbs)
+   - Height (ft'in ex. 5'10)
+   - Goal (cut/bulk/maintain)
+   - Dietary preferences (ex. halal, vegan, Mediterranean)
+   - Allergies?
+2. Wait for the user’s response in the thread, parse the comma-separated input (e.g., "Ishrak, Male, 30, 160 lbs, 5'6, Cut, Halal, None"), and validate that all fields are provided. If incomplete, reply with "Please provide all required information and separate by commas."
+3. If valid, send a follow-up message: "Great! To make a really good meal plan can you also answer these:" followed by these questions in bullet points:
+   - Duration of meal plan in months for your goals (ex. 5 months)
+   - Daily activity (ex. 10,000 steps or 30 mins cardio)
+   - Job Physical Demand (Active or Sedentary)
+   - Health conditions or eating disorders
+   - Previous experience with meal plans? (yes or no)
+   - Your schedule?
+   - Number of meals you want?
+   - Body Fat Percentage
+4. Wait for the user’s second response, parse the comma-separated input (e.g., "3 months, 10,000 steps, Active, None, Yes, 9am-5pm, 4 meals, 20%"), and validate all fields.
+5. If valid, use the OpenAI Assistant to generate a meal plan based on the inputs, including:
+   - Total macronutrients (protein, carbs, fats) for the day.
+   - Macronutrients per meal.
+   - Total micronutrients (vitamins and minerals like those listed in Cronometer: Vitamin A, Vitamin C, Calcium, Iron, etc.).
+   Format the meal plan with bold headings (e.g., **Meal 1: Iftar**, **Total Macronutrients**, **Total Micronutrients**) and bullet points for each meal and nutrient breakdown.
+Add console logs like "Parsed first input: [input_list]", "Parsed second input: [input_list]", and "Generated meal plan for: [username]" to track the process. Do not change other functionality like /rift_taps, /ask, or daily check-ins.

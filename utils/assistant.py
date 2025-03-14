@@ -161,21 +161,49 @@ class AssistantManager:
         return thread_id, formatted_response
 
     async def generate_meal_plan(self, user_data):
+        """Generate a formatted meal plan with macro and micronutrient breakdowns"""
         logger.info(f"Generating meal plan for user data: {user_data}")
         start_time = time.time()
         thread_id = await self._create_thread()
         logger.info(f"Using OpenAI thread ID: {thread_id}")
         prompt = (
-            f"Generate a meal plan following RIFT & TAPS methodology for:\n"
+            f"Generate a personalized Ramadan meal plan with macro and micronutrient breakdowns for:\n"
+            f"Name: {user_data['name']}\n"
+            f"Gender: {user_data['gender']}\n"
+            f"Age: {user_data['age']}\n"
             f"Weight: {user_data['weight']} lbs\n"
             f"Height: {user_data['height']} inches\n"
             f"Goal: {user_data['goal']}\n"
             f"Diet: {user_data['diet']}\n"
-            f"Allergies: {user_data['allergies']}"
+            f"Allergies: {user_data['allergies']}\n"
+            f"Duration: {user_data['duration']}\n"
+            f"Activity: {user_data['activity']}\n"
+            f"Job Demand: {user_data['job_demand']}\n"
+            f"Health Conditions: {user_data['health_conditions']}\n"
+            f"Previous Experience: {user_data['experience']}\n"
+            f"Schedule: {user_data['schedule']}\n"
+            f"Meals Count: {user_data['meals_count']}\n"
+            f"Body Fat: {user_data['body_fat']}\n\n"
+            "Format your response with these sections:\n"
+            "1. Total daily macronutrients (protein, carbs, fats)\n"
+            "2. Each meal with bold headings (e.g., **Meal 1: Iftar**)\n"
+            "3. Macronutrients per meal\n"
+            "4. Total micronutrients (vitamins and minerals)\n"
+            "Use bullet points for listing items and nutrients."
         )
         response = await self._get_assistant_response(thread_id, prompt)
-        logger.info(f"Processing time for /meal_plan: {time.time() - start_time:.2f} seconds")
-        return thread_id, response
+
+        # Format the response sections with bold headers
+        formatted_response = response
+        for section in ["Meal 1:", "Meal 2:", "Meal 3:", "Meal 4:", "Meal 5:", "Total Macronutrients:", "Total Micronutrients:"]:
+            formatted_response = formatted_response.replace(section, f"**{section}**")
+
+        # Add bullet points if not present
+        if not formatted_response.count('- '):
+            formatted_response = formatted_response.replace('\n', '\n- ').replace('- \n', '\n')
+
+        logger.info(f"Formatted meal plan sent: {formatted_response[:100]}...")
+        return thread_id, formatted_response
 
     async def ask_question(self, question):
         logger.info(f"Processing question: {question}")

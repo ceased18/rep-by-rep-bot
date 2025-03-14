@@ -71,40 +71,85 @@ class Commands(commands.Cog):
         await interaction.response.defer()
         thread = await self._get_or_create_thread(interaction, f"Meal Plan for {interaction.user.name}")
 
-        # Ask for user details
-        prompt = ("Answer: Weight (lbs), Height (ft'in or inches), Goal (cut/bulk/maintain), "
-                 "Diet (e.g., halal), Allergies?")
-        await thread.send("Let's create your personalized meal plan! 📋")
-        await thread.send(prompt)
+        # Send initial questions
+        initial_questions = ("Let's create your personalized meal plan 📝\nAnswer these and separate by a comma:\n"
+                           "- Name\n"
+                           "- Gender (male/female)\n"
+                           "- Age\n"
+                           "- Weight (lbs)\n"
+                           "- Height (ft'in ex. 5'10)\n"
+                           "- Goal (cut/bulk/maintain)\n"
+                           "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
+                           "- Allergies?")
+        await thread.send(initial_questions)
         await interaction.followup.send(f"Created a new thread for your meal plan! Please provide your details in {thread.mention}")
 
         def check(m):
             return m.author == interaction.user and m.channel == thread
 
         try:
+            # Wait for first response
             response = await self.bot.wait_for('message', timeout=300.0, check=check)
+            first_input = [item.strip() for item in response.content.split(',')]
+            logger.info(f"Parsed first input: {first_input}")
 
-            # Parse response
-            data = response.content.split(',')
-            if len(data) < 5:
-                await thread.send("Please provide all required information.")
+            # Validate first response
+            if len(first_input) < 8:
+                await thread.send("Please provide all required information and separate by commas.")
                 return
 
-            # Convert height if in ft'in format
-            height = data[1].strip()
+            # Send follow-up questions
+            followup_questions = ("Great! To make a really good meal plan can you also answer these:\n"
+                                "- Duration of meal plan in months for your goals (ex. 5 months)\n"
+                                "- Daily activity (ex. 10,000 steps or 30 mins cardio)\n"
+                                "- Job Physical Demand (Active or Sedentary)\n"
+                                "- Health conditions or eating disorders\n"
+                                "- Previous experience with meal plans? (yes or no)\n"
+                                "- Your schedule?\n"
+                                "- Number of meals you want?\n"
+                                "- Body Fat Percentage")
+            await thread.send(followup_questions)
+
+            # Wait for second response
+            response = await self.bot.wait_for('message', timeout=300.0, check=check)
+            second_input = [item.strip() for item in response.content.split(',')]
+            logger.info(f"Parsed second input: {second_input}")
+
+            # Validate second response
+            if len(second_input) < 8:
+                await thread.send("Please provide all required information and separate by commas.")
+                return
+
+            # Process height if in ft'in format
+            height = first_input[4]
             if "'" in height:
                 ft, inches = height.split("'")
-                height = int(ft) * 12 + int(inches.replace('"', ''))
+                height_inches = int(ft) * 12 + int(inches.replace('"', ''))
+            else:
+                height_inches = int(height)
 
+            # Combine all data
             user_data = {
-                'weight': float(data[0]),
-                'height': float(height),
-                'goal': data[2].strip(),
-                'diet': data[3].strip(),
-                'allergies': data[4].strip()
+                'name': first_input[0],
+                'gender': first_input[1],
+                'age': int(first_input[2]),
+                'weight': float(first_input[3]),
+                'height': height_inches,
+                'goal': first_input[5],
+                'diet': first_input[6],
+                'allergies': first_input[7],
+                'duration': second_input[0],
+                'activity': second_input[1],
+                'job_demand': second_input[2],
+                'health_conditions': second_input[3],
+                'experience': second_input[4],
+                'schedule': second_input[5],
+                'meals_count': second_input[6],
+                'body_fat': second_input[7]
             }
 
             await thread.send("Generating your personalized meal plan... 🔄")
+            logger.info(f"Generated meal plan for: {interaction.user.name}")
 
             # Generate meal plan using Assistant
             openai_thread_id, meal_plan = await self.assistant.generate_meal_plan(user_data)
