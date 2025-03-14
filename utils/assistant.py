@@ -1,8 +1,8 @@
 import os
+import asyncio
 from openai import OpenAI
 import logging
 import time
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -40,20 +40,18 @@ class AssistantManager:
         try:
             start_time = time.time()
 
-            # Add instruction for concise response
-            system_instruction = "Please provide a concise response under 1000 characters. Focus on key points only."
-            self.client.beta.threads.messages.create(
-                thread_id=thread_id,
-                role="system",
-                content=system_instruction
+            # Add user message with instructions for concise response
+            logger.info("Sending message to OpenAI thread with role: user")
+            user_message = (
+                "Please provide a concise response under 1000 characters. "
+                "Focus on key points only.\n\n"
+                f"{prompt}"
             )
-
-            # Add user message
-            logger.debug(f"Adding message to thread {thread_id}")
+            logger.debug(f"Message content length: {len(user_message)} characters")
             self.client.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
-                content=prompt
+                content=user_message
             )
 
             # Run the Assistant
@@ -92,6 +90,10 @@ class AssistantManager:
             # Get messages
             messages = self.client.beta.threads.messages.list(thread_id=thread_id)
             response = messages.data[0].content[0].text.value
+
+            # Log response details
+            logger.debug(f"Response content length: {len(response)} characters")
+            logger.debug(f"Response preview: {response[:100]}...")
 
             # Log processing time
             processing_time = time.time() - start_time
