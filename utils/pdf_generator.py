@@ -33,37 +33,37 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         )
 
         # Define colors
-        darker_blue = colors.HexColor('#1E4D8C')  # Darker blue for headers
-        subtitle_grey = colors.HexColor('#F0F0F0')  # Light grey for subtitle background
+        royal_blue = colors.HexColor('#4169E1')  # Royal blue for headers
+        light_grey = colors.HexColor('#F5F5F5')  # Light grey for background
 
         # Styles
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=24,
-            spaceAfter=30,
+            fontSize=20,
+            spaceAfter=6,
             textColor=colors.black,
-            alignment=1,
+            alignment=0,
             fontName='Helvetica-Bold'
         )
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
-            parent=styles['Heading2'],
-            fontSize=16,
+            parent=styles['Normal'],
+            fontSize=12,
             spaceAfter=20,
-            backColor=subtitle_grey,
-            borderPadding=10,
-            alignment=1
+            textColor=colors.grey,
+            alignment=0
         )
         header_style = ParagraphStyle(
             'CustomHeader',
             parent=styles['Heading2'],
-            fontSize=16,
-            spaceAfter=12,
-            backColor=darker_blue,
+            fontSize=14,
+            spaceAfter=8,
+            backColor=royal_blue,
             textColor=colors.white,
-            borderPadding=5
+            borderPadding=6,
+            alignment=0
         )
         body_style = ParagraphStyle(
             'CustomBody',
@@ -151,24 +151,10 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                     macro_data = default_macros
 
                 # Create table
-                table = Table(
-                    [['Nutrient', 'Amount']] + macro_data,
-                    colWidths=[200, 200]
-                )
-                table.setStyle(TableStyle([
-                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                    ('BACKGROUND', (0, 0), (-1, 0), darker_blue),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 14),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                    ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                    ('FONTSIZE', (0, 1), (-1, -1), 12),
-                    ('TOPPADDING', (0, 1), (-1, -1), 8),
-                ]))
+                # Create a single line of text for macros instead of a table
+                macro_text = " | ".join([f"{nutrient}: {amount}" for nutrient, amount in macro_data])
+                story.append(Paragraph(macro_text, macro_style))
+                story.append(Spacer(1, 12))
                 story.append(table)
                 story.append(Spacer(1, 20))
 
