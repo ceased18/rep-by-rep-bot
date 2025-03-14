@@ -3,6 +3,7 @@ import asyncio
 from openai import OpenAI
 import logging
 import time
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,18 @@ class AssistantManager:
         self.client = OpenAI(api_key=self.api_key)
         self.threads = {}
         logger.info("AssistantManager initialized successfully")
+
+    def _sanitize_text(self, text):
+        """Remove or replace non-printable ASCII characters"""
+        # Replace newlines and tabs with spaces
+        sanitized = re.sub(r'[\n\r\t]+', ' ', text)
+        # Remove other non-printable characters
+        sanitized = re.sub(r'[^\x20-\x7E]+', '', sanitized)
+        # Remove multiple spaces
+        sanitized = re.sub(r'\s+', ' ', sanitized)
+        sanitized = sanitized.strip()
+        logger.debug(f"Sanitized message: {sanitized[:100]}...")
+        return sanitized
 
     async def _create_thread(self):
         """Create a new thread in the OpenAI Assistant"""
@@ -40,18 +53,20 @@ class AssistantManager:
         try:
             start_time = time.time()
 
-            # Add user message with instructions for concise response
-            logger.info("Sending message to OpenAI thread with role: user")
+            # Sanitize user message before sending
             user_message = (
                 "Please provide a concise response under 1000 characters. "
                 "Focus on key points only.\n\n"
                 f"{prompt}"
             )
-            logger.debug(f"Message content length: {len(user_message)} characters")
+            sanitized_message = self._sanitize_text(user_message)
+            logger.debug(f"Message content length: {len(sanitized_message)} characters")
+
+            # Add sanitized message to thread
             self.client.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
-                content=user_message
+                content=sanitized_message
             )
 
             # Run the Assistant
@@ -59,7 +74,7 @@ class AssistantManager:
             run = self.client.beta.threads.runs.create(
                 thread_id=thread_id,
                 assistant_id=self.assistant_id,
-                instructions="Keep your response concise, under 1000 characters. Focus on essential information only."
+                instructions=self._sanitize_text("Keep your response concise, under 1000 characters. Focus on essential information only.")
             )
 
             # Wait for completion with optimized polling
@@ -138,11 +153,11 @@ class AssistantManager:
         thread_id = await self._create_thread()
         response = await self._get_assistant_response(
             thread_id,
-            f"Answer concisely (under 1000 characters): {question}"
+            self._sanitize_text(f"Answer concisely (under 1000 characters): {question}")
         )
         logger.info(f"Processing time for /ask: {time.time() - start_time:.2f} seconds")
         return response
 
     async def continue_conversation(self, thread_id, message):
         logger.debug(f"Continuing conversation in thread {thread_id}")
-        return await self._get_assistant_response(thread_id, message)
+        return await self._get_assistant_response(thread_id, self._sanitize_text(message))
