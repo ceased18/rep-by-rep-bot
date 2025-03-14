@@ -1,0 +1,45 @@
+Build a Discord bot called "Rep by Rep - Ramadan Bot" using Python. The bot helps bodybuilders during Ramadan, using an OpenAI Assistant (ID from Secrets) based on the "Team_Akib_Rep_by_Rep_Ramadan_Blue.pdf" (uploaded to the Assistant). It must be a real-time event bot, listening for messages via Discord’s Gateway. It does not have web search capabilities and should mention this limitation when needed. Follow these requirements:
+
+1. **Setup**:
+   - Use `discord.py` for Discord and `openai` for the Assistant API (version 1.2.0 or latest).
+   - Install dependencies: `pip install discord.py openai PyPDF2 reportlab`.
+   - Use environment variables in Replit Secrets:
+     - `DISCORD_TOKEN`: My bot token (I’ll provide).
+     - `OPENAI_API_KEY`: My OpenAI key (I’ll provide).
+     - `ASSISTANT_ID`: My Assistant ID (I’ll provide).
+     - `GUIDED_MEMBERS_ROLE_ID`: `1348146495022436473`.
+     - `CHECK_IN_CHANNEL_ID`: `1348199669226012733`.
+   - Enable Discord intents: `messages`, `message_content`, `members`.
+
+2. **Welcome New Members**:
+   - On `on_member_join`, assign the "Guided Members" role and send a DM: "Welcome [mention] to Rep by Rep! 💪 Use /help to start. Check-ins at 8 PM EST!"
+
+3. **Commands** (respond only in threads):
+   - `/help`: Show: "Commands: /help, /rift_taps, /mealplan, !ask <question>. Chat in threads! Note: I don’t have web search access."
+   - `/rift_taps`: Use the Assistant to explain RIFT & TAPS.
+   - `/mealplan`: 
+     - Create a thread (check for existing threads), ask: "Answer: Weight (lbs), Height (ft'in or inches), Goal (cut/bulk/maintain), Diet (e.g., halal), Allergies?"
+     - Wait 5 mins for reply, parse input (handle ft'in to inches, % for body fat), use Assistant to generate a meal plan in RIFT & TAPS style.
+     - Create a PDF with `reportlab` (simple text), send in thread.
+     - Enable real-time chatting.
+   - `!ask <question>`: 
+     - Use the Assistant to answer, create a thread, enable real-time chatting.
+     - If the question needs web data (e.g., "What are the Ramadan dates for 2025?"), include: "I don’t have web access, but based on the Team Akib guide, [answer]. For current info, please check online!"
+
+4. **Real-Time Chatting**:
+   - After `/mealplan` or `!ask`, listen for all messages from the thread owner (no prefix).
+   - Use OpenAI Assistant API:
+     - Map Discord thread IDs to Assistant thread IDs in a dictionary.
+     - For each message, add it to the Assistant thread, run it, and reply.
+   - Include the web access disclaimer if needed.
+
+5. **Daily Check-In**:
+   - At 8 PM EST (use `pytz`), post in `CHECK_IN_CHANNEL_ID`: "<@&GUIDED_MEMBERS_ROLE_ID> Time for your daily check-in! 💪\n**RIFT & TAPS Progress**\nReact: 💧 Hydration, 🍎 Timing, 🏋️ Workout\nAnswer below..."
+
+6. **Rules**:
+   - No duplicate threads—check existing threads.
+   - No main channel replies except check-ins.
+   - Keep responses under 1500 characters.
+   - Print "Logged in as [bot name]" on startup.
+
+After building, tell me how to run it and keep it alive on Replit’s free tier.
