@@ -1,9 +1,7 @@
-
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.pdfgen import canvas
 import tempfile
 import os
 import logging
@@ -22,38 +20,6 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         temp_file.close()
         logger.debug(f"Created temporary file: {pdf_path}")
 
-        # Create the PDF with a background canvas
-        class GradientCanvas(canvas.Canvas):
-            def __init__(self, *args, **kwargs):
-                canvas.Canvas.__init__(self, *args, **kwargs)
-                self.pages = []
-
-            def showPage(self):
-                self.pages.append(dict(self.__dict__))
-                self._startPage()
-
-            def save(self):
-                for page in self.pages:
-                    self.__dict__.update(page)
-                    self.draw_gradient()
-                    canvas.Canvas.showPage(self)
-                canvas.Canvas.save(self)
-
-            def draw_gradient(self):
-                height = letter[1]
-                for i in range(100):
-                    path = self.beginPath()
-                    y = height * (i / 100.0)
-                    path.moveTo(0, y)
-                    path.lineTo(letter[0], y)
-                    path.close()
-                    self.setFillColor(colors.Color(
-                        red=0.9 - (0.1 * (1 - i/100.0)),
-                        green=0.9 - (0.1 * (1 - i/100.0)),
-                        blue=0.9 - (0.1 * (1 - i/100.0))
-                    ))
-                    self.drawPath(path, fill=1)
-
         # Create the PDF
         doc = SimpleDocTemplate(
             pdf_path,
@@ -64,6 +30,10 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             bottomMargin=72
         )
 
+        # Define colors
+        darker_blue = colors.HexColor('#1E4D8C')  # Darker blue for headers
+        subtitle_grey = colors.HexColor('#F0F0F0')  # Light grey for subtitle
+
         # Styles
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
@@ -72,14 +42,15 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             fontSize=24,
             spaceAfter=30,
             textColor=colors.black,
-            alignment=1
+            alignment=1,
+            fontName='Helvetica-Bold'
         )
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=styles['Heading2'],
             fontSize=18,
             spaceAfter=20,
-            backColor=colors.lightgrey,
+            backColor=subtitle_grey,
             borderPadding=10,
             alignment=1
         )
@@ -88,7 +59,8 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             parent=styles['Heading2'],
             fontSize=16,
             spaceAfter=12,
-            backColor=colors.lightblue,
+            backColor=darker_blue,
+            textColor=colors.white,
             borderPadding=5
         )
         subheading_style = ParagraphStyle(
@@ -96,7 +68,8 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             parent=styles['Heading3'],
             fontSize=14,
             spaceAfter=8,
-            leftIndent=20
+            leftIndent=20,
+            fontName='Helvetica-Bold'
         )
         body_style = ParagraphStyle(
             'CustomBody',
@@ -149,7 +122,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                     table = Table(rows)
                     table.setStyle(TableStyle([
                         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('BACKGROUND', (0, 0), (-1, 0), darker_blue),
                         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -175,7 +148,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                     # Add meal subheading
                     meal_name = section.split('\n')[0].upper()
                     content.append(Paragraph(meal_name, subheading_style))
-                    
+
                     # Add meal details
                     for line in section.split('\n')[1:]:
                         if line.strip():
@@ -205,8 +178,8 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         content.append(Spacer(1, 20))
         content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
 
-        # Build PDF with gradient background
-        doc.build(content, canvasmaker=GradientCanvas)
+        # Build PDF
+        doc.build(content)
         logger.info("PDF generation completed successfully")
         return pdf_path
 
