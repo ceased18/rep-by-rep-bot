@@ -4,6 +4,7 @@ from discord.ext import commands
 import logging
 from utils.assistant import AssistantManager
 from utils.pdf_generator import generate_meal_plan_pdf
+from utils.message_utils import send_long_message
 import asyncio
 import re
 import os
@@ -14,6 +15,7 @@ class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.assistant = AssistantManager()
+        self.bot.thread_mappings = {} # Initialize thread mapping
 
     async def _get_or_create_thread(self, interaction, name):
         """Create a new thread or get existing one"""
@@ -21,7 +23,9 @@ class Commands(commands.Cog):
         existing_threads = [t for t in interaction.channel.threads if t.owner_id == interaction.user.id]
         if existing_threads:
             return existing_threads[0]
-        return await interaction.channel.create_thread(name=name)
+        thread = await interaction.channel.create_thread(name=name)
+        logger.info(f"Created thread: {name} for command: {interaction.command.name}")
+        return thread
 
     @app_commands.command(name='help', description='Show available commands and usage information')
     async def help_command(self, interaction: discord.Interaction):
@@ -32,10 +36,14 @@ class Commands(commands.Cog):
     @app_commands.command(name='rift_taps', description='Learn about the RIFT & TAPS methodology')
     async def rift_taps(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        thread = await self._get_or_create_thread(interaction, f"RIFT-TAPS-{interaction.user.name}")
+        thread = await self._get_or_create_thread(interaction, f"RIFT & TAPS for {interaction.user.name}")
+
+        # Store thread mapping for real-time chat
         response = await self.assistant.explain_rift_taps()
-        await thread.send(response)
-        await interaction.followup.send("Created a new thread for RIFT & TAPS explanation!")
+        self.bot.thread_mappings[thread.id] = response
+
+        await send_long_message(thread, response)
+        await interaction.followup.send(f"Created a new thread to explain RIFT & TAPS. Check {thread.mention}!")
 
     @app_commands.command(name='mealplan', description='Get a personalized Ramadan meal plan')
     async def mealplan(self, interaction: discord.Interaction):
@@ -82,16 +90,19 @@ class Commands(commands.Cog):
             await thread.send(file=discord.File(pdf_path))
             os.remove(pdf_path)  # Clean up
 
+            # Send the meal plan text in a format that handles long messages
+            await send_long_message(thread, meal_plan)
+
         except asyncio.TimeoutError:
             await thread.send("Response time exceeded. Please try again.")
         except Exception as e:
-            logger.error(f"Error in mealplan command: {e}")
+            logger.error(f"Error in mealplan command: {str(e)}")
             await thread.send("An error occurred. Please try again.")
 
     @app_commands.command(name='ask', description='Ask a question about bodybuilding during Ramadan')
     async def ask(self, interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
-        thread = await self._get_or_create_thread(interaction, f"Question-{interaction.user.name}")
+        thread = await self._get_or_create_thread(interaction, f"Question from {interaction.user.name}")
 
         # Check if question requires web access
         web_keywords = ['today', 'current', '2024', '2025', 'this year', 'next year']
@@ -99,12 +110,15 @@ class Commands(commands.Cog):
 
         response = await self.assistant.ask_question(question)
 
+        # Store thread mapping for real-time chat
+        self.bot.thread_mappings[thread.id] = response
+
         if needs_web:
             response += ("\n\nNote: I don't have web access, but based on the Team Akib guide, "
                         "this is my best answer. For current info, please check online!")
 
-        await thread.send(response)
-        await interaction.followup.send("Created a new thread for your question! Check the response there.")
+        await send_long_message(thread, response)
+        await interaction.followup.send(f"Created a new thread for your question. Check {thread.mention}!")
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))

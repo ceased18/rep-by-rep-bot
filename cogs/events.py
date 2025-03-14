@@ -4,6 +4,7 @@ from discord.ext import commands, tasks
 import pytz
 from datetime import datetime
 import logging
+from utils.message_utils import send_long_message
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class Events(commands.Cog):
             # Send welcome DM
             welcome_msg = (f"Welcome {member.mention} to Rep by Rep! 💪 "
                          f"Use /help to start. Check-ins at 8 PM EST!")
-            await member.send(welcome_msg)
+            await send_long_message(member, welcome_msg)
             logger.info(f"Sent welcome message to {member.name}")
 
         except discord.Forbidden:
@@ -70,7 +71,7 @@ class Events(commands.Cog):
                         self.bot.thread_mappings[message.channel.id],
                         message.content
                     )
-                    await message.channel.send(response)
+                    await send_long_message(message.channel, response)
                     logger.debug(f"Processed thread message in {message.channel.name}")
                 except Exception as e:
                     logger.error(f"Error processing thread message: {str(e)}")
@@ -94,7 +95,7 @@ class Events(commands.Cog):
                     "React: 💧 Hydration, 🍎 Timing, 🏋️ Workout\n"
                     "Answer below..."
                 )
-                check_in_msg = await channel.send(message)
+                check_in_msg = await send_long_message(channel, message)
 
                 # Add reactions
                 reactions = ['💧', '🍎', '🏋️']
