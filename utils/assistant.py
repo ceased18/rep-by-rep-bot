@@ -151,7 +151,7 @@ class AssistantManager:
             formatted_response = "**RIFT & TAPS Overview**\n" + formatted_response
         else:
             formatted_response = ("**RIFT Principles**\n" + sections[0].replace('RIFT', '').replace(':', '').strip() + 
-                                "\n\n**TAPS Overview**\n" + ('TAPS' + sections[1]).replace('Overview', '').replace(':', '').strip())
+                               "\n\n**TAPS Overview**\n" + ('TAPS' + sections[1]).replace('Overview', '').replace(':', '').strip())
 
             # Add bullet points if not present
             if not formatted_response.count('- '):
@@ -178,13 +178,43 @@ class AssistantManager:
             f"Allergies: {user_data['allergies']}\n"
             f"Duration: {user_data['duration']}\n"
             f"Activity: {user_data['activity']}\n"
-            f"Job Demand: {user_data['job_demand']}\n"
+            f"Job Physical Demand: {user_data['job_demand']}\n"
             f"Health Conditions: {user_data['health_conditions']}\n"
             f"Previous Experience: {user_data['experience']}\n"
             f"Schedule: {user_data['schedule']}\n"
             f"Meals Count: {user_data['meals_count']}\n"
             f"Body Fat: {user_data['body_fat']}\n\n"
-            "Format your response with these sections:\n"
+            "Use these calculation guidelines:\n"
+            "1. Calculate BMR using Harris-Benedict equation:\n"
+            "   - For males: 88.362 + (13.397 × weight in kg) + (4.799 × height in cm) – (5.677 × age)\n"
+            "   - For females: 447.593 + (9.247 × weight in kg) + (3.098 × height in cm) – (4.330 × age)\n"
+            "2. Adjust BMR with activity multiplier:\n"
+            "   - Sedentary: 1.2\n"
+            "   - Lightly active: 1.375\n"
+            "   - Moderately active: 1.55\n"
+            "   - Very active: 1.725\n"
+            "3. Calculate macros based on goal:\n"
+            "   For cutting:\n"
+            "   - If body fat > 25% (male) or > 35% (female): 0.8-0.9g protein/lb\n"
+            "   - Otherwise: 1.1-1.5g protein/lb\n"
+            "   - Deficit: 400-1300 calories below TDEE based on duration\n"
+            "   For bulking:\n"
+            "   - Protein: 0.9-1.35g/lb\n"
+            "   - Surplus: 150-300 calories above TDEE\n"
+            "   For maintenance:\n"
+            "   - Protein: 1.0-1.2g/lb\n"
+            "   For all goals:\n"
+            "   - Fat: 0.3-0.4g/lb\n"
+            "   - Remaining calories from carbs\n"
+            "4. Provide practical implementation:\n"
+            "   - Include exact portion sizes (e.g., '8 oz chicken breast cooked')\n"
+            "   - List calorie counts for all components\n"
+            "   - Focus on high-protein, budget-friendly options\n"
+            "   - Keep prep time under 30 minutes per meal\n"
+            "   - Include pre-workout timing (45-30 mins before exercise)\n"
+            "   - Allow one cheat meal per week\n"
+            "   - Recommend supplements and hydration goals (minimum 1.25 gallons per day)\n\n"
+            "Format the response with:\n"
             "1. Total daily macronutrients (protein, carbs, fats)\n"
             "2. Each meal with bold headings (e.g., **Meal 1: Iftar**)\n"
             "3. Macronutrients per meal\n"
@@ -203,6 +233,7 @@ class AssistantManager:
             formatted_response = formatted_response.replace('\n', '\n- ').replace('- \n', '\n')
 
         logger.info(f"Formatted meal plan sent: {formatted_response[:100]}...")
+        logger.info(f"Applied calculation context for meal plan: {user_data['name']}")
         return thread_id, formatted_response
 
     async def ask_question(self, question):

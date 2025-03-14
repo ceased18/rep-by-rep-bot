@@ -1,0 +1,53 @@
+Update the OpenAI Assistant instructions to include the following context for generating meal plans in the /mealplan command:
+Provide detailed, practical advice that users can implement without feeling overwhelmed.
+Focus on creating high-protein, budget-friendly meal plans with accessible ingredients.
+Ensure meals are simple to prepare (taking 30 minutes or less).
+- Use the Harris-Benedict equation to calculate BMR, then adjust based on the individual's activity level and goals.
+Goals:
+- Cutting: Begin with a calorie intake 400–1300 calories below TDEE (total daily energy expenditure) based on the duration of the cutting phase. Prioritize protein (1.1–1.5g per pound of body weight), with fats at a minimum (0.3–0.4g per pound), and assign the remaining calories to carbohydrates.
+- Bulking: Start with a calorie intake 150–300 calories above TDEE, with protein at 0.9–1.35g per pound, followed by fats (0.3–0.4g per pound), and then carbohydrates.
+- Maintenance: Set calorie intake at TDEE with protein still prioritized as described above.
+ Dietary Considerations
+
+- Accommodate dietary restrictions (e.g., kosher, halal, vegan, vegetarian, lactose intolerance, gluten-free).
+- Exclude foods based on allergies or specific health conditions.
+- Integrate food preferences to enhance adherence.
+ Meal Structure
+- Include a pre-workout meal (45–30 minutes before exercise) that features fast-digesting carbohydrates and hydration.
+- Adjust meal frequency and structure to fit daily schedules (e.g., fewer meals on long workdays).
+- Allow one cheat meal per week (substitute the highest-calorie meal, excluding pre-workout). 
+Implementation Guidelines
+- Provide detailed portion sizes (e.g., "8 oz chicken breast cooked") and include calorie counts for all components, including condiments and beverages.
+- Emphasize the importance of accurate food weighing to maintain consistency.
+- Allow flexibility in meal timing, except for pre-workout meals.  
+Supplement Recommendations
+- Recommend supplements such as electrolytes, multivitamins, or fish oil with clear timing and dosage instructions.
+- Suggest hydration goals (for example, a minimum of 1.25 gallons of fluids per day).
+ Macronutrient Calculation Guidelines
+
+Protein Requirements:
+For cutting:
+If the individual is obese (body fat > 25% for males or > 35% for females), aim for approximately 0.8–0.9g per pound of body weight.
+Otherwise, aim for approximately 1.1–1.5g per pound.
+For bulking: Aim for approximately 0.9–1.35g per pound.
+For maintenance: Aim for approximately 1.0–1.2g per pound.
+Fat Requirements:
+
+Aim for approximately 0.3–0.4g per pound of body weight.
+Calorie Calculations:
+
+BMR Calculation:
+For males:
+BMR = 88.362 + (13.397 × weight in kg) + (4.799 × height in cm) – (5.677 × age)
+For females:
+BMR = 447.593 + (9.247 × weight in kg) + (3.098 × height in cm) – (4.330 × age)
+Adjust BMR with an activity multiplier (e.g., 1.2 for sedentary lifestyles, with increases based on daily steps, exercise intensity, and job physical demands).
+For cutting: Subtract a calorie deficit based on the timeline and weight goal.
+For bulking: Add approximately 200 extra calories.
+For maintenance: Use the calculated TDEE.
+Carbohydrate Calculations:
+
+After accounting for protein and fat, use the remaining calories to determine carbohydrate needs (using 4 calories per gram).
+- Estimate micronutrients based on food choices, using typical values for common foods (e.g., 100g broccoli: 89 mg Vitamin C, 47 mg Calcium; 200g chicken: 1.2 mg Iron).
+- Generate a meal plan with total macronutrients, macronutrients per meal, and total micronutrients (include Vitamin A, Vitamin C, Calcium, Iron, and others as listed in Cronometer).
+Add a console log like "Applied calculation context for meal plan: [username]" to confirm. Do not change other functionality like /rift_taps, /ask, or daily check-ins.
