@@ -23,8 +23,14 @@ class Commands(commands.Cog):
         existing_threads = [t for t in interaction.channel.threads if t.owner_id == interaction.user.id]
         if existing_threads:
             return existing_threads[0]
-        thread = await interaction.channel.create_thread(name=name)
-        logger.info(f"Thread initialized for {interaction.command.name}: {name}")
+
+        # Create a new public thread that will show in the sidebar
+        thread = await interaction.channel.create_thread(
+            name=name,
+            type=discord.ChannelType.public_thread,
+            auto_archive_duration=1440  # Archive after 24 hours of inactivity
+        )
+        logger.info(f"Thread created and formatted for {interaction.command.name}: {name}")
         return thread
 
     @app_commands.command(name='help', description='Show available commands and usage information')
@@ -36,12 +42,14 @@ class Commands(commands.Cog):
     @app_commands.command(name='rift_taps', description='Learn about the RIFT & TAPS methodology')
     async def rift_taps(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        thread = await self._get_or_create_thread(interaction, f"RIFT & TAPS for {interaction.user.name}")
-        logger.info(f"Thread formatted for rift_taps: {thread.name}")
+
+        # Create public thread with proper name
+        thread_name = f"RIFT & TAPS for {interaction.user.name}"
+        thread = await self._get_or_create_thread(interaction, thread_name)
+        logger.info(f"Thread created and formatted for rift_taps: {thread_name}")
 
         # Send welcome message with emoji
         await thread.send("Let's explore RIFT & TAPS! 💪")
-        await thread.send("I'll explain how this training methodology works during Ramadan...")
 
         # Get and store response for real-time chat
         response = await self.assistant.explain_rift_taps()
@@ -50,7 +58,11 @@ class Commands(commands.Cog):
         # Send the response
         await send_long_message(thread, response)
         await thread.send("\nFeel free to ask any follow-up questions about RIFT & TAPS! 🤓")
-        await interaction.followup.send(f"Created a thread to explain RIFT & TAPS. Check {thread.mention}! 💪")
+
+        # Send main channel confirmation with thread mention
+        await interaction.followup.send(
+            f"Created a thread to explain RIFT & TAPS. Check {thread.mention}! 💪"
+        )
 
     @app_commands.command(name='mealplan', description='Get a personalized Ramadan meal plan')
     async def mealplan(self, interaction: discord.Interaction):
