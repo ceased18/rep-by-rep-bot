@@ -33,7 +33,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
 
         # Define colors
         darker_blue = colors.HexColor('#1E4D8C')  # Darker blue for headers
-        subtitle_grey = colors.HexColor('#F0F0F0')  # Light grey for subtitle
+        subtitle_grey = colors.HexColor('#F0F0F0')  # Light grey for subtitle background
 
         # Styles
         styles = getSampleStyleSheet()
@@ -71,6 +71,15 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             leading=14,
             spaceAfter=8,
             leftIndent=20
+        )
+        macro_style = ParagraphStyle(
+            'CustomMacro',
+            parent=styles['BodyText'],
+            fontSize=12,
+            leading=14,
+            spaceAfter=12,
+            leftIndent=20,
+            alignment=0
         )
         footer_style = ParagraphStyle(
             'CustomFooter',
@@ -130,21 +139,21 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 story.append(Spacer(1, 20))
             
             elif "MEAL" in section.upper() or "IFTAR" in section.upper() or "SUHOOR" in section.upper():
-                # Food image before meal sections
-                meal_icon_path = os.path.join('assets', 'meal icon.jpg')
-                if os.path.exists(meal_icon_path):
-                    meal_img = Image(meal_icon_path, width=144, height=72)
-                    story.append(meal_img)
-                    story.append(Spacer(1, 12))
-                
-                lines = section.split('\n')
                 story.append(Paragraph("Meals", header_style))
                 story.append(Spacer(1, 12))
                 
+                lines = section.split('\n')
                 for line in lines:
                     if line.strip():
-                        if any(meal in line.upper() for meal in ['IFTAR', 'SUHOOR', 'SNACK']):
-                            story.append(Paragraph(line.strip(), body_style))
+                        if ":" in line:
+                            meal_name, details = line.split(":", 1)
+                            story.append(Paragraph(meal_name.strip().upper(), header_style))
+                            story.append(Paragraph(details.strip(), body_style))
+                            
+                            # Add macros if they exist
+                            if "|" in details:
+                                macros = details.split("|")[1].strip()
+                                story.append(Paragraph(macros, macro_style))
                         else:
                             story.append(Paragraph(line.strip(), body_style))
                 story.append(Spacer(1, 12))
