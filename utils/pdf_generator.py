@@ -1,3 +1,4 @@
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
@@ -32,7 +33,6 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 self._startPage()
 
             def save(self):
-                # Add gradient to each page
                 for page in self.pages:
                     self.__dict__.update(page)
                     self.draw_gradient()
@@ -40,8 +40,6 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 canvas.Canvas.save(self)
 
             def draw_gradient(self):
-                # Create gradient from light grey to white
-                self.setFillColor(colors.lightgrey)
                 height = letter[1]
                 for i in range(100):
                     path = self.beginPath()
@@ -50,9 +48,9 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                     path.lineTo(letter[0], y)
                     path.close()
                     self.setFillColor(colors.Color(
-                        red=1 - (0.2 * (1 - i/100.0)),
-                        green=1 - (0.2 * (1 - i/100.0)),
-                        blue=1 - (0.2 * (1 - i/100.0))
+                        red=0.9 - (0.1 * (1 - i/100.0)),
+                        green=0.9 - (0.1 * (1 - i/100.0)),
+                        blue=0.9 - (0.1 * (1 - i/100.0))
                     ))
                     self.drawPath(path, fill=1)
 
@@ -73,9 +71,17 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             parent=styles['Heading1'],
             fontSize=24,
             spaceAfter=30,
-            backColor=colors.green,
-            textColor=colors.white,
-            borderPadding=10
+            textColor=colors.black,
+            alignment=1
+        )
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Heading2'],
+            fontSize=18,
+            spaceAfter=20,
+            backColor=colors.lightgrey,
+            borderPadding=10,
+            alignment=1
         )
         heading_style = ParagraphStyle(
             'CustomHeading',
@@ -85,119 +91,127 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             backColor=colors.lightblue,
             borderPadding=5
         )
+        subheading_style = ParagraphStyle(
+            'CustomSubheading',
+            parent=styles['Heading3'],
+            fontSize=14,
+            spaceAfter=8,
+            leftIndent=20
+        )
         body_style = ParagraphStyle(
             'CustomBody',
             parent=styles['BodyText'],
             fontSize=12,
             leading=14,
-            spaceAfter=12,
-            bulletColor=colors.red
+            spaceAfter=8,
+            leftIndent=40
         )
         footer_style = ParagraphStyle(
             'CustomFooter',
             parent=styles['Italic'],
             fontSize=12,
             textColor=colors.blue,
-            spaceAfter=0
+            spaceAfter=0,
+            alignment=1
         )
 
         # Content
         content = []
-        try:
-            # Add title
-            content.append(Paragraph(f"Your Personalized Meal Plan", title_style))
+
+        # Title and Subtitle
+        content.append(Paragraph(f"Meal Plan for {username}", title_style))
+        content.append(Spacer(1, 12))
+        content.append(Paragraph("Personalized Nutrition Plan for Ramadan", subtitle_style))
+        content.append(Spacer(1, 12))
+
+        # Food image
+        food_image_path = os.path.join('assets', 'food_image.jpg')
+        if os.path.exists(food_image_path):
+            food_img = Image(food_image_path, width=144, height=72)  # 2x1 inches
+            content.append(food_img)
             content.append(Spacer(1, 12))
 
-            # Add meal icon at the top
-            meal_icon_path = os.path.join('assets', 'meal icon.jpg')
-            if os.path.exists(meal_icon_path):
-                meal_img = Image(meal_icon_path, width=144, height=72)  # 2x1 inches (72 points per inch)
-                content.append(meal_img)
-                content.append(Spacer(1, 12))
-            else:
-                logger.warning(f"Meal icon not found at {meal_icon_path}")
-
-            # Parse the meal plan text into sections
-            sections = meal_plan_text.split('\n\n')
-            for section in sections:
-                if section.strip():
-                    if "Total Macronutrients" in section:
-                        # Add section heading
-                        content.append(Paragraph("Total Macronutrients", heading_style))
-                        content.append(Spacer(1, 12))
-
-                        # Parse macronutrients into table data
-                        rows = [['Nutrient', 'Amount']]
-                        for line in section.split('\n')[1:]:  # Skip the heading
-                            if ':' in line:
-                                nutrient, amount = line.split(':', 1)
-                                rows.append([nutrient.strip(), amount.strip()])
-
-                        # Create table with alternating colors
-                        table = Table(rows)
-                        table.setStyle(TableStyle([
-                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                            ('FONTSIZE', (0, 0), (-1, 0), 14),
-                            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.lightgrey, colors.white])
-                        ]))
-                        content.append(table)
-                        content.append(Spacer(1, 12))
-                    elif "Meal" in section:
-                        # Add plate icon before meal sections
-                        plate_icon_path = os.path.join('assets', 'plate icon.jpg')
-                        if os.path.exists(plate_icon_path):
-                            plate_img = Image(plate_icon_path, width=36, height=36)  # 0.5x0.5 inches
-                            content.append(plate_img)
-                            content.append(Spacer(1, 6))
-
-                        # Add section heading
-                        heading = section.split('\n')[0]
-                        content.append(Paragraph(heading, heading_style))
-                        content.append(Spacer(1, 12))
-
-                        # Add bullet points with red bullets
-                        for line in section.split('\n')[1:]:
-                            if line.strip():
-                                content.append(Paragraph(f"• {line.strip()}", body_style))
-                    else:
-                        content.append(Paragraph(section, body_style))
+        # Parse the meal plan text into sections
+        sections = meal_plan_text.split('\n\n')
+        for section in sections:
+            if section.strip():
+                if "Total Macronutrients" in section:
+                    content.append(Paragraph("Total Daily Macronutrients", heading_style))
                     content.append(Spacer(1, 12))
 
-            # Add Tips for Success section
-            content.append(Spacer(1, 20))
-            content.append(Paragraph("Tips for Success", heading_style))
-            content.append(Spacer(1, 12))
+                    # Parse macronutrients into table data
+                    rows = [['Nutrient', 'Amount']]
+                    for line in section.split('\n')[1:]:
+                        if ':' in line:
+                            nutrient, amount = line.split(':', 1)
+                            rows.append([nutrient.strip(), amount.strip()])
 
-            tips = [
-                "Stay hydrated during non-fasting hours.",
-                "Prioritize protein at Suhoor and Iftar.",
-                "Adjust portions based on energy levels."
-            ]
-            for tip in tips:
-                content.append(Paragraph(f"• {tip}", body_style))
+                    table = Table(rows)
+                    table.setStyle(TableStyle([
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 14),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12)
+                    ]))
+                    content.append(table)
+                    content.append(Spacer(1, 12))
 
-            # Add footer text in blue italic
-            content.append(Spacer(1, 20))  # Add extra space before footer
-            content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
+                elif "Meal" in section:
+                    if "Meals" not in locals():
+                        content.append(Paragraph("Meals", heading_style))
+                        content.append(Spacer(1, 12))
+                        meals = True
 
-            # Build PDF with gradient background
-            doc.build(content, canvasmaker=GradientCanvas)
-            logger.info("PDF generation completed successfully")
-            return pdf_path
+                    # Add plate icon
+                    plate_icon_path = os.path.join('assets', 'plate_icon.jpg')
+                    if os.path.exists(plate_icon_path):
+                        plate_img = Image(plate_icon_path, width=36, height=36)  # 0.5x0.5 inches
+                        content.append(plate_img)
+                        content.append(Spacer(1, 6))
 
-        except Exception as e:
-            logger.error(f"Error creating PDF content: {str(e)}")
-            raise
+                    # Add meal subheading
+                    meal_name = section.split('\n')[0].upper()
+                    content.append(Paragraph(meal_name, subheading_style))
+                    
+                    # Add meal details
+                    for line in section.split('\n')[1:]:
+                        if line.strip():
+                            content.append(Paragraph(line.strip(), body_style))
+                    content.append(Spacer(1, 12))
+
+                elif "Micronutrients" in section:
+                    content.append(Paragraph("Total Micronutrients", heading_style))
+                    content.append(Spacer(1, 12))
+                    for line in section.split('\n')[1:]:
+                        if line.strip():
+                            content.append(Paragraph(line.strip(), body_style))
+                    content.append(Spacer(1, 12))
+
+        # Tips for Success section
+        content.append(Paragraph("Tips for Success", heading_style))
+        content.append(Spacer(1, 12))
+        tips = [
+            "Stay hydrated during non-fasting hours.",
+            "Prioritize protein at Suhoor and Iftar.",
+            "Adjust portions based on energy levels."
+        ]
+        for tip in tips:
+            content.append(Paragraph(tip, body_style))
+
+        # Footer
+        content.append(Spacer(1, 20))
+        content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
+
+        # Build PDF with gradient background
+        doc.build(content, canvasmaker=GradientCanvas)
+        logger.info("PDF generation completed successfully")
+        return pdf_path
 
     except Exception as e:
         logger.error(f"Error generating PDF: {str(e)}")
-        # Clean up temporary file if it exists
         if 'pdf_path' in locals() and os.path.exists(pdf_path):
             try:
                 os.remove(pdf_path)
