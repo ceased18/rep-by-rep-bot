@@ -22,16 +22,27 @@ class AssistantManager:
         logger.info("AssistantManager initialized successfully")
 
     def _sanitize_text(self, text):
-        """Remove or replace non-printable ASCII characters"""
-        # Replace newlines and tabs with spaces
-        sanitized = re.sub(r'[\n\r\t]+', ' ', text)
-        # Remove other non-printable characters
-        sanitized = re.sub(r'[^\x20-\x7E]+', '', sanitized)
-        # Remove multiple spaces
-        sanitized = re.sub(r'\s+', ' ', sanitized)
-        sanitized = sanitized.strip()
-        logger.debug(f"Sanitized message: {sanitized[:100]}...")
-        return sanitized
+        """Remove all non-printable ASCII characters and sanitize text for API calls"""
+        try:
+            # Handle None or empty string
+            if not text:
+                return ""
+
+            # First replace common problematic characters
+            sanitized = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+
+            # Remove any remaining non-printable ASCII characters
+            sanitized = ''.join(char for char in sanitized if ord(char) >= 32 and ord(char) <= 126)
+
+            # Collapse multiple spaces
+            sanitized = ' '.join(sanitized.split())
+
+            logger.debug(f"Sanitized text for OpenAI: {sanitized[:100]}...")
+            return sanitized
+        except Exception as e:
+            logger.error(f"Error sanitizing text: {str(e)}")
+            # Return a safe default if sanitization fails
+            return "Error processing message"
 
     async def _create_thread(self):
         """Create a new thread in the OpenAI Assistant"""
@@ -102,9 +113,9 @@ class AssistantManager:
                 await asyncio.sleep(poll_interval)
                 poll_interval = min(poll_interval * 1.5, max_poll_interval)
 
-            # Get messages
+            # Get messages and sanitize response
             messages = self.client.beta.threads.messages.list(thread_id=thread_id)
-            response = messages.data[0].content[0].text.value
+            response = self._sanitize_text(messages.data[0].content[0].text.value)
 
             # Log response details
             logger.debug(f"Response content length: {len(response)} characters")
