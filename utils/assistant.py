@@ -122,22 +122,36 @@ class AssistantManager:
             logger.info(f"Processing time for thread {thread_id}: {processing_time:.2f} seconds")
 
             return response
-
         except Exception as e:
             logger.error(f"Error getting assistant response: {str(e)}")
             raise
 
     async def explain_rift_taps(self):
+        """Generate a formatted RIFT & TAPS explanation"""
         logger.info("Generating RIFT & TAPS explanation")
         start_time = time.time()
         thread_id = await self._create_thread()
         logger.info(f"Using OpenAI thread ID: {thread_id}")
-        response = await self._get_assistant_response(
-            thread_id,
-            "Explain the RIFT & TAPS methodology for Ramadan training briefly and concisely."
+        prompt = (
+            "Explain the RIFT & TAPS methodology for Ramadan training. "
+            "Format your response with these sections:\n"
+            "1. Start with 'RIFT Principles:' and list each principle as a bullet point\n"
+            "2. Follow with 'TAPS Overview:' and list each TAPS component as a bullet point\n"
+            "Be concise and clear."
         )
-        logger.info(f"Processing time for /rift_taps: {time.time() - start_time:.2f} seconds")
-        return thread_id, response
+        response = await self._get_assistant_response(thread_id, prompt)
+
+        # Format the response
+        sections = response.split('TAPS')
+        formatted_response = ("**RIFT Principles**\n" + sections[0].replace('RIFT', '').replace(':', '').strip() + 
+                            "\n\n**TAPS Overview**\n" + ('TAPS' + sections[1]).replace('Overview', '').replace(':', '').strip())
+
+        # Add bullet points if not present
+        if not formatted_response.count('- '):
+            formatted_response = formatted_response.replace('\n', '\n- ').replace('- \n', '\n')
+
+        logger.info(f"Formatted explanation sent: {formatted_response[:100]}...")
+        return thread_id, formatted_response
 
     async def generate_meal_plan(self, user_data):
         logger.info(f"Generating meal plan for user data: {user_data}")
@@ -169,5 +183,18 @@ class AssistantManager:
         return thread_id, response
 
     async def continue_conversation(self, thread_id, message):
+        """Continue conversation with formatted responses"""
         logger.info(f"Continuing conversation in OpenAI thread: {thread_id}")
-        return await self._get_assistant_response(thread_id, self._sanitize_text(message))
+        response = await self._get_assistant_response(
+            thread_id, 
+            self._sanitize_text(message + "\nFormat your response using bullet points where applicable.")
+        )
+
+        # Format response with bullet points if it contains multiple lines
+        if '\n' in response and not response.count('- '):
+            formatted_response = '- ' + response.replace('\n', '\n- ').replace('- \n', '\n')
+        else:
+            formatted_response = response
+
+        logger.info(f"Formatted follow-up sent: {formatted_response[:100]}...")
+        return formatted_response

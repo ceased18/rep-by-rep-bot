@@ -48,16 +48,18 @@ class Commands(commands.Cog):
         thread = await self._get_or_create_thread(interaction, thread_name)
         logger.info(f"Thread created and formatted for rift_taps: {thread_name}")
 
-        # Send welcome message with emoji
-        await thread.send("Let's explore RIFT & TAPS! 💪")
+        # Send initial wait message
+        initial_message = "Let's explore RIFT & TAPS! 💪\nPlease wait a few seconds for processing."
+        await thread.send(initial_message)
+        logger.info(f"Initial thread message sent: {initial_message}")
 
         # Get and store response for real-time chat
         openai_thread_id, response = await self.assistant.explain_rift_taps()
         self.bot.thread_mappings[thread.id] = openai_thread_id
 
-        # Send the response
+        # Send the formatted response
         await send_long_message(thread, response)
-        await thread.send("\nFeel free to ask any follow-up questions about RIFT & TAPS! 🤓")
+        await thread.send("\nFeel free to ask any follow-up questions about RIFT & TAPS! 👓")
 
         # Send main channel confirmation with thread mention
         await interaction.followup.send(
