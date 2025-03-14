@@ -30,7 +30,6 @@ class RamadanBot(commands.Bot):
         commands = [
             {'name': 'help', 'description': 'Show available commands and usage information'},
             {'name': 'rift_taps', 'description': 'Learn about the RIFT & TAPS methodology'},
-            {'name': 'mealplan', 'description': 'Get a personalized Ramadan meal plan'},
             {'name': 'ask', 'description': 'Ask a question about bodybuilding during Ramadan'}
         ]
         return hashlib.md5(json.dumps(commands, sort_keys=True).encode()).hexdigest()
