@@ -133,6 +133,19 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                         content.append(Paragraph(section, body_style))
                     content.append(Spacer(1, 12))
 
+            # Add Tips for Success section
+            content.append(Spacer(1, 20))
+            content.append(Paragraph("Tips for Success", heading_style))
+            content.append(Spacer(1, 12))
+            
+            tips = [
+                "Stay hydrated during non-fasting hours.",
+                "Prioritize protein at Suhoor and Iftar.",
+                "Adjust portions based on energy levels."
+            ]
+            for tip in tips:
+                content.append(Paragraph(f"• {tip}", body_style))
+            
             # Add footer text in blue italic
             content.append(Spacer(1, 20))  # Add extra space before footer
             content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
