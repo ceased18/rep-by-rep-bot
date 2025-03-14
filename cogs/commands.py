@@ -37,9 +37,11 @@ class Commands(commands.Cog):
     async def rift_taps(self, interaction: discord.Interaction):
         await interaction.response.defer()
         thread = await self._get_or_create_thread(interaction, f"RIFT & TAPS for {interaction.user.name}")
+        logger.info(f"Thread formatted for rift_taps: {thread.name}")
 
-        # Send welcome message
-        await thread.send("Let's explore RIFT & TAPS! 📚\nHere's the explanation:")
+        # Send welcome message with emoji
+        await thread.send("Let's explore RIFT & TAPS! 💪")
+        await thread.send("I'll explain how this training methodology works during Ramadan...")
 
         # Get and store response for real-time chat
         response = await self.assistant.explain_rift_taps()
@@ -47,6 +49,7 @@ class Commands(commands.Cog):
 
         # Send the response
         await send_long_message(thread, response)
+        await thread.send("\nFeel free to ask any follow-up questions about RIFT & TAPS! 🤓")
         await interaction.followup.send(f"Created a thread to explain RIFT & TAPS. Check {thread.mention}! 💪")
 
     @app_commands.command(name='mealplan', description='Get a personalized Ramadan meal plan')
@@ -110,23 +113,26 @@ class Commands(commands.Cog):
     async def ask(self, interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
         thread = await self._get_or_create_thread(interaction, f"Question from {interaction.user.name}")
+        logger.info(f"Thread formatted for ask: {thread.name}")
 
-        # Send welcome message with the question
-        await thread.send(f"Answering your question: **{question}**\n\nHere's the response:")
-
-        # Check if question requires web access
-        web_keywords = ['today', 'current', '2024', '2025', 'this year', 'next year']
-        needs_web = any(keyword in question.lower() for keyword in web_keywords)
+        # Send welcome message with question and emoji
+        await thread.send(f"Let's answer your question: **{question}** ❓")
+        await thread.send("Here's what I found based on Team Akib's guide...")
 
         # Get and store response for real-time chat
         response = await self.assistant.ask_question(question)
         self.bot.thread_mappings[thread.id] = response
 
+        # Check if question requires web access
+        web_keywords = ['today', 'current', '2024', '2025', 'this year', 'next year']
+        needs_web = any(keyword in question.lower() for keyword in web_keywords)
+
         if needs_web:
             response += ("\n\nNote: I don't have web access, but based on the Team Akib guide, "
-                        "this is my best answer. For current info, please check online!")
+                        "this is my best answer. For current info, please check online! 🌐")
 
         await send_long_message(thread, response)
+        await thread.send("\nFeel free to ask follow-up questions! I'm here to help! 💪")
         await interaction.followup.send(f"Created a thread for your question. Check {thread.mention}! 🤔")
 
 async def setup(bot):
