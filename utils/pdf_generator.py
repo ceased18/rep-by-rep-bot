@@ -32,27 +32,27 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         # Get sample stylesheet and define custom styles
         styles = getSampleStyleSheet()
 
-        # Title style - black text, clean and professional
+        # Title style - black text, professional look
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=24,
+            fontSize=20,
             textColor=colors.black,
             alignment=1,  # Center alignment
             spaceAfter=6
         )
 
-        # Subtitle style - light grey, smaller
+        # Subtitle style - light grey
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=styles['Normal'],
-            fontSize=14,
+            fontSize=12,
             textColor=colors.grey,
             alignment=1,  # Center alignment
             spaceAfter=20
         )
 
-        # Header style - blue background like RIFT & TAPS
+        # Header style - royal blue background like in RIFT & TAPS
         header_style = ParagraphStyle(
             'CustomHeader',
             parent=styles['Heading2'],
@@ -64,32 +64,32 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             spaceAfter=12
         )
 
-        # Normal text style
+        # Body text style
         text_style = ParagraphStyle(
             'CustomText',
             parent=styles['Normal'],
             fontSize=11,
             leading=14,
-            spaceAfter=8
+            spaceAfter=8,
+            alignment=0  # Left alignment
         )
 
-        # Footer style - italic text
+        # Footer style - italic
         footer_style = ParagraphStyle(
             'CustomFooter',
             parent=styles['Italic'],
             fontSize=12,
             textColor=colors.black,
-            alignment=1,  # Center alignment
-            spaceAfter=0
+            alignment=1  # Center alignment
         )
 
         # Start building content
         story = []
 
-        # Add title and subtitle
-        story.append(Paragraph(f"Meal Plan for {username}", title_style))
+        # Title and subtitle
+        story.append(Paragraph(f"RIFT & TAPS Ramadan Meal Plan", title_style))
         story.append(Spacer(1, 12))
-        story.append(Paragraph("Personalized Nutrition Plan for Ramadan", subtitle_style))
+        story.append(Paragraph(f"Personalized plan for {username}", subtitle_style))
         story.append(Spacer(1, 20))
 
         # Process meal plan text
@@ -109,6 +109,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             # Add section header
             header = lines[0].strip()
             story.append(Paragraph(header, header_style))
+            story.append(Spacer(1, 8))
 
             if "Total Macronutrients" in header:
                 # Create table for macronutrients
@@ -119,24 +120,29 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                         table_data.append([nutrient.strip(), amount.strip()])
 
                 if table_data:
-                    table = Table(table_data, colWidths=[doc.width/2]*2)
+                    # Create table with equal column widths
+                    table = Table(table_data, colWidths=[doc.width/2.5]*2)
                     table.setStyle(TableStyle([
                         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
                         ('FONTSIZE', (0, 0), (-1, -1), 11),
                         ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-                        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
+                        ('TOPPADDING', (0, 0), (-1, -1), 12),
+                        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.lightgrey])
                     ]))
                     story.append(table)
             else:
-                # Add regular text content
+                # Add meal content with macros on the same line
                 for line in lines[1:]:
                     if line.strip():
-                        story.append(Paragraph(line.strip(), text_style))
+                        # For meal items, combine food and macros in a clean format
+                        if '|' in line:
+                            food, macros = line.split('|', 1)
+                            content = f"{food.strip()} ({macros.strip()})"
+                        else:
+                            content = line.strip()
+                        story.append(Paragraph(content, text_style))
 
             story.append(Spacer(1, 12))
 

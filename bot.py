@@ -38,9 +38,11 @@ class RamadanBot(commands.Bot):
     def _load_command_hash(self):
         """Load the previously saved command hash"""
         try:
-            with open(self.command_hash_file, 'r') as f:
-                return json.load(f)['hash']
-        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            if os.path.exists(self.command_hash_file):
+                os.remove(self.command_hash_file)  # Force resync
+            return None
+        except Exception as e:
+            logger.warning(f"Error removing hash file: {e}")
             return None
 
     def _save_command_hash(self, hash_value):
@@ -58,28 +60,22 @@ class RamadanBot(commands.Bot):
             logger.error(f"Failed to load cogs: {str(e)}")
             raise
 
-        # Check if commands need to be synced
-        current_hash = self._get_command_hash()
-        saved_hash = self._load_command_hash()
-
-        if current_hash == saved_hash:
-            logger.info("Command registration status: skipped (no changes detected)")
-            return
-
-        # Sync commands with rate limit handling
+        # Force command sync by removing old hash
+        logger.info("Syncing slash commands...")
         try:
-            logger.info("Syncing slash commands...")
             synced = await self.tree.sync()
+            current_hash = self._get_command_hash()
             self._save_command_hash(current_hash)
             logger.info(f"Command registration status: updated (synced {len(synced)} commands)")
         except discord.HTTPException as e:
             if e.status == 429:  # Rate limit error
                 logger.warning(f"Command registration status: rate-limited (retry after {e.retry_after} seconds)")
-                # Continue with existing commands
             else:
                 logger.error(f"Command registration status: failed (HTTP error {e.status})")
+                raise
         except Exception as e:
             logger.error(f"Command registration status: failed ({str(e)})")
+            raise
 
     async def on_ready(self):
         logger.info(f'Logged in as {self.user.name}')
