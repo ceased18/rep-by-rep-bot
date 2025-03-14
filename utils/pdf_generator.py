@@ -1,4 +1,3 @@
-
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
@@ -91,108 +90,104 @@ def generate_meal_plan_pdf(meal_plan_text, username):
 
         # Content
         story = []
-        
+
         # Title
         story.append(Paragraph(f"Meal Plan for {username}", title_style))
         story.append(Spacer(1, 12))
-        
+
         # Subtitle
         story.append(Paragraph("Personalized Nutrition Plan for Ramadan", subtitle_style))
         story.append(Spacer(1, 12))
 
+        # Try to add meal icon at the top
+        try:
+            meal_icon_path = os.path.join('assets', 'meal icon.jpg')
+            if os.path.exists(meal_icon_path):
+                meal_img = Image(meal_icon_path, width=144, height=72)  # 2x1 inches
+                story.append(meal_img)
+                story.append(Spacer(1, 12))
+            else:
+                logger.warning(f"Meal icon not found at {meal_icon_path}")
+        except Exception as e:
+            logger.warning(f"Error adding meal icon: {str(e)}")
+
         # Process meal plan text
         sections = meal_plan_text.split('\n\n')
-        
-        # Default macros if none provided
-        default_macros = [
-            ['Protein', '150g'],
-            ['Carbs', '200g'],
-            ['Fats', '60g'],
-            ['Calories', '2000']
-        ]
-
-        # Default meals if none provided
-        default_meals = {
-            "Suhoor - 45 min before Fajr": {
-                "items": "Oatmeal with Whey Protein and Almonds (1 cup oatmeal, 1 scoop whey protein, 1/4 cup almonds)",
-                "macros": "Protein: 40g | Carbs: 60g | Fats: 15g | Calories: 540"
-            },
-            "Iftar - At Maghrib": {
-                "items": "Grilled Chicken with Quinoa and Steamed Broccoli (6 oz chicken, 1 cup quinoa, 1 cup broccoli)",
-                "macros": "Protein: 50g | Carbs: 45g | Fats: 10g | Calories: 500"
-            },
-            "Post-Taraweeh": {
-                "items": "Greek Yogurt with Mixed Berries and Honey (1 cup Greek yogurt, 1/2 cup mixed berries, 1 tbsp honey)",
-                "macros": "Protein: 20g | Carbs: 40g | Fats: 5g | Calories: 300"
-            }
-        }
 
         for section in sections:
             if not section.strip():
                 continue
-            
+
             # Clean up section text
             section = section.replace('###', '').replace('**', '')
-            
-            if "Total Daily Macronutrients" in section:
-                story.append(Paragraph("Total Daily Macronutrients", header_style))
+
+            if "Total Macronutrients" in section:
+                story.append(Paragraph("Total Macronutrients", header_style))
                 story.append(Spacer(1, 12))
-                
+
                 # Parse macros or use defaults
-                macro_data = []
-                macro_lines = section.split('\n')[1:]
+                macro_data = [['Nutrient', 'Amount']]  # Initialize with header row
+                macro_lines = section.split('\n')[1:]  # Skip the header
                 if len(macro_lines) > 1:
                     for line in macro_lines:
                         if ':' in line:
                             nutrient, amount = line.split(':', 1)
                             macro_data.append([nutrient.strip(), amount.strip()])
-                
-                if not macro_data:
-                    macro_data = default_macros
+                else:
+                    # Use defaults if no data
+                    macro_data.extend([
+                        ['Protein', '150g'],
+                        ['Carbs', '200g'],
+                        ['Fats', '60g']
+                    ])
 
-                # Create table
-                # Create a single line of text for macros instead of a table
-                macro_text = " | ".join([f"{nutrient}: {amount}" for nutrient, amount in macro_data])
-                story.append(Paragraph(macro_text, macro_style))
-                story.append(Spacer(1, 12))
-                story.append(table)
+                # Create and style the macro table
+                macro_table = Table(macro_data)
+                macro_table.setStyle(TableStyle([
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 14),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.lightgrey, colors.white])
+                ]))
+                story.append(macro_table)
                 story.append(Spacer(1, 20))
 
-                # Add Meals header
+            elif "Meals" in section:
                 story.append(Paragraph("Meals", header_style))
                 story.append(Spacer(1, 12))
+                meal_lines = section.split('\n')[1:]
 
-                # Process meal sections or use defaults
-                found_meals = False
-                for section_part in sections:
-                    if any(meal_type in section_part.upper() for meal_type in ["SUHOOR", "IFTAR", "POST-TARAWEEH"]):
-                        found_meals = True
-                        meal_lines = section_part.split('\n')
-                        meal_name = meal_lines[0].strip().replace('###', '').replace('**', '')
-                        
-                        story.append(Paragraph(meal_name, header_style))
-                        
-                        if len(meal_lines) > 1:
-                            items = meal_lines[1].strip()
-                            macros = meal_lines[2].strip() if len(meal_lines) > 2 else ""
-                            
-                            story.append(Paragraph(items, body_style))
-                            if macros:
-                                story.append(Paragraph(macros, macro_style))
-                        story.append(Spacer(1, 12))
+                # Add plate icon before each meal
+                try:
+                    plate_icon_path = os.path.join('assets', 'plate icon.jpg')
+                    if os.path.exists(plate_icon_path):
+                        plate_img = Image(plate_icon_path, width=36, height=36)  # 0.5x0.5 inches
+                        story.append(plate_img)
+                        story.append(Spacer(1, 6))
+                except Exception as e:
+                    logger.warning(f"Error adding plate icon: {str(e)}")
 
-                # If no meals found in the text, use defaults
-                if not found_meals:
-                    for meal_name, meal_data in default_meals.items():
-                        story.append(Paragraph(meal_name, header_style))
-                        story.append(Paragraph(meal_data["items"], body_style))
-                        story.append(Paragraph(meal_data["macros"], macro_style))
-                        story.append(Spacer(1, 12))
+                for line in meal_lines:
+                    if line.strip():
+                        story.append(Paragraph(line, body_style))
 
-        # Add some space before footer
+            else:
+                # Other sections (like micronutrients)
+                if section.strip():
+                    story.append(Paragraph(section.split('\n')[0], header_style))
+                    story.append(Spacer(1, 12))
+                    for line in section.split('\n')[1:]:
+                        if line.strip():
+                            story.append(Paragraph(line, body_style))
+                    story.append(Spacer(1, 12))
+
+        # Add footer
         story.append(Spacer(1, 30))
-        
-        # Footer with italic style
         story.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
 
         # Build PDF
