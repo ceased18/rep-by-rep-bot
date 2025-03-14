@@ -24,7 +24,7 @@ class Commands(commands.Cog):
         if existing_threads:
             return existing_threads[0]
         thread = await interaction.channel.create_thread(name=name)
-        logger.info(f"Created thread: {name} for command: {interaction.command.name}")
+        logger.info(f"Thread initialized for {interaction.command.name}: {name}")
         return thread
 
     @app_commands.command(name='help', description='Show available commands and usage information')
@@ -38,23 +38,28 @@ class Commands(commands.Cog):
         await interaction.response.defer()
         thread = await self._get_or_create_thread(interaction, f"RIFT & TAPS for {interaction.user.name}")
 
-        # Store thread mapping for real-time chat
+        # Send welcome message
+        await thread.send("Let's explore RIFT & TAPS! 📚\nHere's the explanation:")
+
+        # Get and store response for real-time chat
         response = await self.assistant.explain_rift_taps()
         self.bot.thread_mappings[thread.id] = response
 
+        # Send the response
         await send_long_message(thread, response)
-        await interaction.followup.send(f"Created a new thread to explain RIFT & TAPS. Check {thread.mention}!")
+        await interaction.followup.send(f"Created a thread to explain RIFT & TAPS. Check {thread.mention}! 💪")
 
     @app_commands.command(name='mealplan', description='Get a personalized Ramadan meal plan')
     async def mealplan(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        thread = await self._get_or_create_thread(interaction, f"Meal-Plan-{interaction.user.name}")
+        thread = await self._get_or_create_thread(interaction, f"Meal Plan for {interaction.user.name}")
 
         # Ask for user details
         prompt = ("Answer: Weight (lbs), Height (ft'in or inches), Goal (cut/bulk/maintain), "
                  "Diet (e.g., halal), Allergies?")
+        await thread.send("Let's create your personalized meal plan! 📋")
         await thread.send(prompt)
-        await interaction.followup.send("Created a new thread for your meal plan! Please provide your details in the thread.")
+        await interaction.followup.send(f"Created a new thread for your meal plan! Please provide your details in {thread.mention}")
 
         def check(m):
             return m.author == interaction.user and m.channel == thread
@@ -82,6 +87,8 @@ class Commands(commands.Cog):
                 'allergies': data[4].strip()
             }
 
+            await thread.send("Generating your personalized meal plan... 🔄")
+
             # Generate meal plan using Assistant
             meal_plan = await self.assistant.generate_meal_plan(user_data)
 
@@ -90,7 +97,7 @@ class Commands(commands.Cog):
             await thread.send(file=discord.File(pdf_path))
             os.remove(pdf_path)  # Clean up
 
-            # Send the meal plan text in a format that handles long messages
+            # Send the meal plan text
             await send_long_message(thread, meal_plan)
 
         except asyncio.TimeoutError:
@@ -104,13 +111,15 @@ class Commands(commands.Cog):
         await interaction.response.defer()
         thread = await self._get_or_create_thread(interaction, f"Question from {interaction.user.name}")
 
+        # Send welcome message with the question
+        await thread.send(f"Answering your question: **{question}**\n\nHere's the response:")
+
         # Check if question requires web access
         web_keywords = ['today', 'current', '2024', '2025', 'this year', 'next year']
         needs_web = any(keyword in question.lower() for keyword in web_keywords)
 
+        # Get and store response for real-time chat
         response = await self.assistant.ask_question(question)
-
-        # Store thread mapping for real-time chat
         self.bot.thread_mappings[thread.id] = response
 
         if needs_web:
@@ -118,7 +127,7 @@ class Commands(commands.Cog):
                         "this is my best answer. For current info, please check online!")
 
         await send_long_message(thread, response)
-        await interaction.followup.send(f"Created a new thread for your question. Check {thread.mention}!")
+        await interaction.followup.send(f"Created a thread for your question. Check {thread.mention}! 🤔")
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
