@@ -1,3 +1,4 @@
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
@@ -48,14 +49,14 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=styles['Heading2'],
-            fontSize=18,
+            fontSize=16,
             spaceAfter=20,
             backColor=subtitle_grey,
             borderPadding=10,
             alignment=1
         )
-        heading_style = ParagraphStyle(
-            'CustomHeading',
+        header_style = ParagraphStyle(
+            'CustomHeader',
             parent=styles['Heading2'],
             fontSize=16,
             spaceAfter=12,
@@ -63,123 +64,112 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             textColor=colors.white,
             borderPadding=5
         )
-        subheading_style = ParagraphStyle(
-            'CustomSubheading',
-            parent=styles['Heading3'],
-            fontSize=14,
-            spaceAfter=8,
-            leftIndent=20,
-            fontName='Helvetica-Bold'
-        )
         body_style = ParagraphStyle(
             'CustomBody',
             parent=styles['BodyText'],
             fontSize=12,
             leading=14,
             spaceAfter=8,
-            leftIndent=40
+            leftIndent=20
         )
         footer_style = ParagraphStyle(
             'CustomFooter',
             parent=styles['Italic'],
             fontSize=12,
             textColor=colors.blue,
-            spaceAfter=0,
             alignment=1
         )
 
         # Content
-        content = []
+        story = []
+        
+        # Title
+        story.append(Paragraph(f"Meal Plan for {username}", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Subtitle
+        story.append(Paragraph("Personalized Nutrition Plan for Ramadan", subtitle_style))
+        story.append(Spacer(1, 12))
 
-        # Title and Subtitle
-        content.append(Paragraph(f"Meal Plan for {username}", title_style))
-        content.append(Spacer(1, 12))
-        content.append(Paragraph("Personalized Nutrition Plan for Ramadan", subtitle_style))
-        content.append(Spacer(1, 12))
-
-        # Food image
-        food_image_path = os.path.join('assets', 'food_image.jpg')
-        if os.path.exists(food_image_path):
-            food_img = Image(food_image_path, width=144, height=72)  # 2x1 inches
-            content.append(food_img)
-            content.append(Spacer(1, 12))
-
-        # Parse the meal plan text into sections
+        # Process meal plan text
         sections = meal_plan_text.split('\n\n')
         for section in sections:
-            if section.strip():
-                if "Total Macronutrients" in section:
-                    content.append(Paragraph("Total Daily Macronutrients", heading_style))
-                    content.append(Spacer(1, 12))
-
-                    # Parse macronutrients into table data
-                    rows = [['Nutrient', 'Amount']]
-                    for line in section.split('\n')[1:]:
-                        if ':' in line:
-                            nutrient, amount = line.split(':', 1)
-                            rows.append([nutrient.strip(), amount.strip()])
-
-                    table = Table(rows)
-                    table.setStyle(TableStyle([
-                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                        ('BACKGROUND', (0, 0), (-1, 0), darker_blue),
-                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                        ('FONTSIZE', (0, 0), (-1, 0), 14),
-                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12)
-                    ]))
-                    content.append(table)
-                    content.append(Spacer(1, 12))
-
-                elif "Meal" in section:
-                    if "Meals" not in locals():
-                        content.append(Paragraph("Meals", heading_style))
-                        content.append(Spacer(1, 12))
-                        meals = True
-
-                    # Add plate icon
-                    plate_icon_path = os.path.join('assets', 'plate_icon.jpg')
-                    if os.path.exists(plate_icon_path):
-                        plate_img = Image(plate_icon_path, width=36, height=36)  # 0.5x0.5 inches
-                        content.append(plate_img)
-                        content.append(Spacer(1, 6))
-
-                    # Add meal subheading
-                    meal_name = section.split('\n')[0].upper()
-                    content.append(Paragraph(meal_name, subheading_style))
-
-                    # Add meal details
-                    for line in section.split('\n')[1:]:
-                        if line.strip():
-                            content.append(Paragraph(line.strip(), body_style))
-                    content.append(Spacer(1, 12))
-
-                elif "Micronutrients" in section:
-                    content.append(Paragraph("Total Micronutrients", heading_style))
-                    content.append(Spacer(1, 12))
-                    for line in section.split('\n')[1:]:
-                        if line.strip():
-                            content.append(Paragraph(line.strip(), body_style))
-                    content.append(Spacer(1, 12))
-
-        # Tips for Success section
-        content.append(Paragraph("Tips for Success", heading_style))
-        content.append(Spacer(1, 12))
-        tips = [
-            "Stay hydrated during non-fasting hours.",
-            "Prioritize protein at Suhoor and Iftar.",
-            "Adjust portions based on energy levels."
-        ]
-        for tip in tips:
-            content.append(Paragraph(tip, body_style))
+            if not section.strip():
+                continue
+                
+            # Clean up section text
+            section = section.replace('###', '').replace('**', '')
+            
+            if "Total Daily Macronutrients" in section:
+                story.append(Paragraph("Total Daily Macronutrients", header_style))
+                story.append(Spacer(1, 12))
+                
+                # Parse macros into table data
+                rows = [['Nutrient', 'Amount']]
+                for line in section.split('\n')[1:]:
+                    if ':' in line:
+                        nutrient, amount = line.split(':', 1)
+                        rows.append([nutrient.strip(), amount.strip()])
+                
+                # Create table
+                table = Table(rows, colWidths=[200, 200])
+                table.setStyle(TableStyle([
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('BACKGROUND', (0, 0), (-1, 0), darker_blue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 14),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 12),
+                    ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ]))
+                story.append(table)
+                story.append(Spacer(1, 20))
+            
+            elif "MEAL" in section.upper() or "IFTAR" in section.upper() or "SUHOOR" in section.upper():
+                # Food image before meal sections
+                meal_icon_path = os.path.join('assets', 'meal icon.jpg')
+                if os.path.exists(meal_icon_path):
+                    meal_img = Image(meal_icon_path, width=144, height=72)
+                    story.append(meal_img)
+                    story.append(Spacer(1, 12))
+                
+                lines = section.split('\n')
+                story.append(Paragraph("Meals", header_style))
+                story.append(Spacer(1, 12))
+                
+                for line in lines:
+                    if line.strip():
+                        if any(meal in line.upper() for meal in ['IFTAR', 'SUHOOR', 'SNACK']):
+                            story.append(Paragraph(line.strip(), body_style))
+                        else:
+                            story.append(Paragraph(line.strip(), body_style))
+                story.append(Spacer(1, 12))
+            
+            elif "Micronutrients" in section:
+                story.append(Paragraph("Total Micronutrients", header_style))
+                story.append(Spacer(1, 12))
+                for line in section.split('\n')[1:]:
+                    if line.strip():
+                        story.append(Paragraph(line.strip(), body_style))
+                story.append(Spacer(1, 12))
+            
+            elif "Tips" in section:
+                story.append(Paragraph("Tips for Success", header_style))
+                story.append(Spacer(1, 12))
+                for line in section.split('\n')[1:]:
+                    if line.strip():
+                        story.append(Paragraph(line.strip(), body_style))
+                story.append(Spacer(1, 20))
 
         # Footer
-        content.append(Spacer(1, 20))
-        content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
+        story.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
 
         # Build PDF
-        doc.build(content)
+        doc.build(story)
         logger.info("PDF generation completed successfully")
         return pdf_path
 
