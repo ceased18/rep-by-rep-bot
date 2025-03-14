@@ -2,8 +2,8 @@ import os
 import logging
 import discord
 from discord.ext import commands
-import pytz
-from datetime import datetime
+import json
+import hashlib
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -20,24 +20,66 @@ class RamadanBot(commands.Bot):
             command_prefix=['/', '!'],
             intents=intents,
             help_command=None,
-            application_id=os.getenv('APPLICATION_ID')  # Add application ID
+            application_id=os.getenv('APPLICATION_ID')
         )
-        # Store thread mappings
         self.thread_mappings = {}
+        self.command_hash_file = 'command_hash.json'
+
+    def _get_command_hash(self):
+        """Generate a hash of the current command definitions"""
+        commands = [
+            {'name': 'help', 'description': 'Show available commands and usage information'},
+            {'name': 'rift_taps', 'description': 'Learn about the RIFT & TAPS methodology'},
+            {'name': 'mealplan', 'description': 'Get a personalized Ramadan meal plan'},
+            {'name': 'ask', 'description': 'Ask a question about bodybuilding during Ramadan'}
+        ]
+        return hashlib.md5(json.dumps(commands, sort_keys=True).encode()).hexdigest()
+
+    def _load_command_hash(self):
+        """Load the previously saved command hash"""
+        try:
+            with open(self.command_hash_file, 'r') as f:
+                return json.load(f)['hash']
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            return None
+
+    def _save_command_hash(self, hash_value):
+        """Save the current command hash"""
+        with open(self.command_hash_file, 'w') as f:
+            json.dump({'hash': hash_value}, f)
 
     async def setup_hook(self):
         # Load cogs first
-        await self.load_extension("cogs.commands")
-        await self.load_extension("cogs.events")
+        try:
+            await self.load_extension("cogs.commands")
+            await self.load_extension("cogs.events")
+            logger.info("Cogs loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load cogs: {str(e)}")
+            raise
 
-        # Sync commands
+        # Check if commands need to be synced
+        current_hash = self._get_command_hash()
+        saved_hash = self._load_command_hash()
+
+        if current_hash == saved_hash:
+            logger.info("Command registration status: skipped (no changes detected)")
+            return
+
+        # Sync commands with rate limit handling
         try:
             logger.info("Syncing slash commands...")
             synced = await self.tree.sync()
-            logger.info(f"Slash commands synced successfully! Synced {len(synced)} command(s)")
+            self._save_command_hash(current_hash)
+            logger.info(f"Command registration status: updated (synced {len(synced)} commands)")
+        except discord.HTTPException as e:
+            if e.status == 429:  # Rate limit error
+                logger.warning(f"Command registration status: rate-limited (retry after {e.retry_after} seconds)")
+                # Continue with existing commands
+            else:
+                logger.error(f"Command registration status: failed (HTTP error {e.status})")
         except Exception as e:
-            logger.error(f"Failed to sync commands: {str(e)}")
-            raise
+            logger.error(f"Command registration status: failed ({str(e)})")
 
     async def on_ready(self):
         logger.info(f'Logged in as {self.user.name}')
@@ -56,7 +98,7 @@ class RamadanBot(commands.Bot):
         invite_link = discord.utils.oauth_url(
             self.user.id,
             permissions=permissions,
-            scopes=["bot", "applications.commands"]  # Add both scopes
+            scopes=["bot", "applications.commands"]
         )
         logger.info(f'Invite link: {invite_link}')
 
