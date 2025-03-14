@@ -1,0 +1,15 @@
+I’m working on a Discord bot in a file called bot.py. My /mealplan command collects two sets of user inputs and generates a PDF using the reportlab library, but the PDF output is plain and doesn’t match the quality I want. I want to debug and fix the PDF generation in the /mealplan command to make it look clean and professional, similar to the output of my /rift_taps command, which has a structured layout with blue section headers. Here’s what I want to do:
+
+1. Ensure the PDF name is "Meal Plan for [Name].pdf", where [Name] is the first input the user provides (e.g., "Meal Plan for Ishrak.pdf").
+2. Use the reportlab library to structure the PDF like this:
+   - Title: "Meal Plan for [Name]" with a green background.
+   - Section 1: "Total Daily Macronutrients" with a light blue background, displayed as a table with black borders and alternating light grey rows (columns: "Nutrient" and "Amount", rows for Protein, Carbs, Fats).
+   - Section 2: "Meals" with a light blue background for the header, listing meals (e.g., Iftar, Snack) with red bullet points for each meal’s items and macronutrients.
+   - Section 3: "Total Micronutrients" with a light blue background, using red bullet points for each micronutrient.
+   - Section 4: "Tips for Success" with a light blue background, including 3 red bullet points: "Stay hydrated during non-fasting hours.", "Prioritize protein at Suhoor and Iftar.", "Adjust portions based on energy levels."
+   - Footer: "Feel free to ask questions about your meal plan!" in italic blue text.
+3. Add a gradient background to the entire PDF, transitioning from light grey at the top to white at the bottom.
+4. Add images: a "food_image.jpg" at the top (2 inches wide, 1 inch tall) and a "plate_icon.jpg" before each meal (0.5 inches wide, 0.5 inches tall). I’ve uploaded these images to my Replit project.
+5. Ensure the meal plan data (macros, meals, micros) is generated based on the user inputs, not hardcoded. My inputs are: First: "Ishrak, Male, 30, 160 lbs, 5'6, Cut, Halal, None", Second: "3 months, 10,000 steps, Active, None, Yes, 9am-5pm, 4 meals, 20%". Use placeholder data for now if needed (e.g., Protein: 150g, Carbs: 200g, Fats: 60g, Meals like Iftar, Snack, etc.).
+
+The current /mealplan command collects inputs using await ctx.send and bot.wait_for, then generates a PDF. Keep the input collection part the same, but fix the PDF generation to match the structure and styling above. Make sure the bot sends the PDF to Discord using await ctx.send(file=discord.File(pdf_name)). Check the console for errors and let me know if there are issues (e.g., missing images, import errors).
