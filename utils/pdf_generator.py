@@ -1,6 +1,6 @@
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import tempfile
 import os
@@ -8,13 +8,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def generate_meal_plan_pdf(meal_plan_text):
+def generate_meal_plan_pdf(meal_plan_text, username):
     """Generate a PDF file containing the meal plan"""
     logger.info("Starting meal plan PDF generation")
 
     try:
-        # Create temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        # Create temporary file with custom name
+        pdf_name = f"Meal Plan for {username}.pdf"
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f'_{pdf_name}')
         pdf_path = temp_file.name
         temp_file.close()
         logger.debug(f"Created temporary file: {pdf_path}")
@@ -35,21 +36,40 @@ def generate_meal_plan_pdf(meal_plan_text):
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=24,
-            spaceAfter=30
+            spaceAfter=30,
+            backColor=colors.green,
+            textColor=colors.white,
+            borderPadding=10
+        )
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            spaceAfter=12,
+            backColor=colors.lightblue,
+            borderPadding=5
         )
         body_style = ParagraphStyle(
             'CustomBody',
             parent=styles['BodyText'],
             fontSize=12,
             leading=14,
-            spaceAfter=12
+            spaceAfter=12,
+            bulletColor=colors.red
+        )
+        footer_style = ParagraphStyle(
+            'CustomFooter',
+            parent=styles['Italic'],
+            fontSize=12,
+            textColor=colors.blue,
+            spaceAfter=0
         )
 
         # Content
         content = []
         try:
             # Add title
-            content.append(Paragraph("Your Personalized Meal Plan", title_style))
+            content.append(Paragraph(f"Your Personalized Meal Plan", title_style))
             content.append(Spacer(1, 12))
 
             # Try to add images if they exist
@@ -75,12 +95,54 @@ def generate_meal_plan_pdf(meal_plan_text):
                 logger.warning(f"Error adding images to PDF: {str(img_error)}")
                 # Continue without images
 
-            # Split the meal plan text into paragraphs
-            paragraphs = meal_plan_text.split('\n')
-            for para in paragraphs:
-                if para.strip():
-                    content.append(Paragraph(para, body_style))
+            # Parse the meal plan text into sections
+            sections = meal_plan_text.split('\n\n')
+            for section in sections:
+                if section.strip():
+                    if "Total Macronutrients" in section:
+                        # Add section heading
+                        content.append(Paragraph("Total Macronutrients", heading_style))
+                        content.append(Spacer(1, 12))
+
+                        # Parse macronutrients into table data
+                        rows = [['Nutrient', 'Amount']]
+                        for line in section.split('\n')[1:]:  # Skip the heading
+                            if ':' in line:
+                                nutrient, amount = line.split(':', 1)
+                                rows.append([nutrient.strip(), amount.strip()])
+
+                        # Create table with alternating colors
+                        table = Table(rows)
+                        table.setStyle(TableStyle([
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                            ('FONTSIZE', (0, 0), (-1, 0), 14),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.lightgrey, colors.white])
+                        ]))
+                        content.append(table)
+                        content.append(Spacer(1, 12))
+                    elif any(keyword in section for keyword in ["Meal", "Micronutrients"]):
+                        # Add section heading
+                        heading = section.split('\n')[0]
+                        content.append(Paragraph(heading, heading_style))
+                        content.append(Spacer(1, 12))
+
+                        # Add bullet points with red bullets
+                        for line in section.split('\n')[1:]:
+                            if line.strip():
+                                content.append(Paragraph(f"• {line.strip()}", body_style))
+                    else:
+                        content.append(Paragraph(section, body_style))
                     content.append(Spacer(1, 12))
+
+            # Add footer text in blue italic
+            content.append(Spacer(1, 20))  # Add extra space before footer
+            content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
 
             # Build PDF
             doc.build(content)

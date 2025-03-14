@@ -156,7 +156,7 @@ class Commands(commands.Cog):
             self.bot.thread_mappings[thread.id] = openai_thread_id
 
             # Generate and send PDF
-            pdf_path = generate_meal_plan_pdf(meal_plan)
+            pdf_path = generate_meal_plan_pdf(meal_plan, user_data['name'])
             await thread.send(file=discord.File(pdf_path))
             os.remove(pdf_path)  # Clean up
 
