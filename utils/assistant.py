@@ -117,10 +117,6 @@ class AssistantManager:
             messages = self.client.beta.threads.messages.list(thread_id=thread_id)
             response = self._sanitize_text(messages.data[0].content[0].text.value)
 
-            # Log response details
-            logger.debug(f"Response content length: {len(response)} characters")
-            logger.debug(f"Response preview: {response[:100]}...")
-
             # Log processing time
             processing_time = time.time() - start_time
             logger.info(f"Processing time for thread {thread_id}: {processing_time:.2f} seconds")
@@ -135,17 +131,19 @@ class AssistantManager:
         logger.info("Generating RIFT & TAPS explanation")
         start_time = time.time()
         thread_id = await self._create_thread()
+        logger.info(f"Using OpenAI thread ID: {thread_id}")
         response = await self._get_assistant_response(
             thread_id,
             "Explain the RIFT & TAPS methodology for Ramadan training briefly and concisely."
         )
         logger.info(f"Processing time for /rift_taps: {time.time() - start_time:.2f} seconds")
-        return response
+        return thread_id, response
 
     async def generate_meal_plan(self, user_data):
         logger.info(f"Generating meal plan for user data: {user_data}")
         start_time = time.time()
         thread_id = await self._create_thread()
+        logger.info(f"Using OpenAI thread ID: {thread_id}")
         prompt = (
             f"Generate a meal plan following RIFT & TAPS methodology for:\n"
             f"Weight: {user_data['weight']} lbs\n"
@@ -156,19 +154,20 @@ class AssistantManager:
         )
         response = await self._get_assistant_response(thread_id, prompt)
         logger.info(f"Processing time for /meal_plan: {time.time() - start_time:.2f} seconds")
-        return response
+        return thread_id, response
 
     async def ask_question(self, question):
         logger.info(f"Processing question: {question}")
         start_time = time.time()
         thread_id = await self._create_thread()
+        logger.info(f"Using OpenAI thread ID: {thread_id}")
         response = await self._get_assistant_response(
             thread_id,
             self._sanitize_text(f"Answer concisely (under 1000 characters): {question}")
         )
         logger.info(f"Processing time for /ask: {time.time() - start_time:.2f} seconds")
-        return response
+        return thread_id, response
 
     async def continue_conversation(self, thread_id, message):
-        logger.debug(f"Continuing conversation in thread {thread_id}")
+        logger.info(f"Continuing conversation in OpenAI thread: {thread_id}")
         return await self._get_assistant_response(thread_id, self._sanitize_text(message))

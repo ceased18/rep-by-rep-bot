@@ -52,8 +52,8 @@ class Commands(commands.Cog):
         await thread.send("Let's explore RIFT & TAPS! 💪")
 
         # Get and store response for real-time chat
-        response = await self.assistant.explain_rift_taps()
-        self.bot.thread_mappings[thread.id] = response
+        openai_thread_id, response = await self.assistant.explain_rift_taps()
+        self.bot.thread_mappings[thread.id] = openai_thread_id
 
         # Send the response
         await send_long_message(thread, response)
@@ -105,7 +105,8 @@ class Commands(commands.Cog):
             await thread.send("Generating your personalized meal plan... 🔄")
 
             # Generate meal plan using Assistant
-            meal_plan = await self.assistant.generate_meal_plan(user_data)
+            openai_thread_id, meal_plan = await self.assistant.generate_meal_plan(user_data)
+            self.bot.thread_mappings[thread.id] = openai_thread_id
 
             # Generate and send PDF
             pdf_path = generate_meal_plan_pdf(meal_plan)
@@ -114,6 +115,7 @@ class Commands(commands.Cog):
 
             # Send the meal plan text
             await send_long_message(thread, meal_plan)
+            await thread.send("\nFeel free to ask questions about your meal plan! 🍽️")
 
         except asyncio.TimeoutError:
             await thread.send("Response time exceeded. Please try again.")
@@ -125,15 +127,15 @@ class Commands(commands.Cog):
     async def ask(self, interaction: discord.Interaction, *, question: str):
         await interaction.response.defer()
         thread = await self._get_or_create_thread(interaction, f"Question from {interaction.user.name}")
-        logger.info(f"Thread formatted for ask: {thread.name}")
+        logger.info(f"Thread created and formatted for ask: {thread.name}")
 
         # Send welcome message with question and emoji
         await thread.send(f"Let's answer your question: **{question}** ❓")
         await thread.send("Here's what I found based on Team Akib's guide...")
 
         # Get and store response for real-time chat
-        response = await self.assistant.ask_question(question)
-        self.bot.thread_mappings[thread.id] = response
+        openai_thread_id, response = await self.assistant.ask_question(question)
+        self.bot.thread_mappings[thread.id] = openai_thread_id
 
         # Check if question requires web access
         web_keywords = ['today', 'current', '2024', '2025', 'this year', 'next year']
