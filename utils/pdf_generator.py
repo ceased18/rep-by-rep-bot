@@ -2,6 +2,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfgen import canvas
 import tempfile
 import os
 import logging
@@ -19,6 +20,41 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         pdf_path = temp_file.name
         temp_file.close()
         logger.debug(f"Created temporary file: {pdf_path}")
+
+        # Create the PDF with a background canvas
+        class GradientCanvas(canvas.Canvas):
+            def __init__(self, *args, **kwargs):
+                canvas.Canvas.__init__(self, *args, **kwargs)
+                self.pages = []
+
+            def showPage(self):
+                self.pages.append(dict(self.__dict__))
+                self._startPage()
+
+            def save(self):
+                # Add gradient to each page
+                for page in self.pages:
+                    self.__dict__.update(page)
+                    self.draw_gradient()
+                    canvas.Canvas.showPage(self)
+                canvas.Canvas.save(self)
+
+            def draw_gradient(self):
+                # Create gradient from light grey to white
+                self.setFillColor(colors.lightgrey)
+                height = letter[1]
+                for i in range(100):
+                    path = self.beginPath()
+                    y = height * (i / 100.0)
+                    path.moveTo(0, y)
+                    path.lineTo(letter[0], y)
+                    path.close()
+                    self.setFillColor(colors.Color(
+                        red=1 - (0.2 * (1 - i/100.0)),
+                        green=1 - (0.2 * (1 - i/100.0)),
+                        blue=1 - (0.2 * (1 - i/100.0))
+                    ))
+                    self.drawPath(path, fill=1)
 
         # Create the PDF
         doc = SimpleDocTemplate(
@@ -150,8 +186,8 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             content.append(Spacer(1, 20))  # Add extra space before footer
             content.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
 
-            # Build PDF
-            doc.build(content)
+            # Build PDF with gradient background
+            doc.build(content, canvasmaker=GradientCanvas)
             logger.info("PDF generation completed successfully")
             return pdf_path
 
