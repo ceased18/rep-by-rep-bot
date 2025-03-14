@@ -111,6 +111,22 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             ['Calories', '2000']
         ]
 
+        # Default meals if none provided
+        default_meals = {
+            "Suhoor - 45 min before Fajr": {
+                "items": "Oatmeal with Whey Protein and Almonds (1 cup oatmeal, 1 scoop whey protein, 1/4 cup almonds)",
+                "macros": "Protein: 40g | Carbs: 60g | Fats: 15g | Calories: 540"
+            },
+            "Iftar - At Maghrib": {
+                "items": "Grilled Chicken with Quinoa and Steamed Broccoli (6 oz chicken, 1 cup quinoa, 1 cup broccoli)",
+                "macros": "Protein: 50g | Carbs: 45g | Fats: 10g | Calories: 500"
+            },
+            "Post-Taraweeh": {
+                "items": "Greek Yogurt with Mixed Berries and Honey (1 cup Greek yogurt, 1/2 cup mixed berries, 1 tbsp honey)",
+                "macros": "Protein: 20g | Carbs: 40g | Fats: 5g | Calories: 300"
+            }
+        }
+
         for section in sections:
             if not section.strip():
                 continue
@@ -155,35 +171,42 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 ]))
                 story.append(table)
                 story.append(Spacer(1, 20))
-            
-            elif any(meal_type in section.upper() for meal_type in ["MEAL", "IFTAR", "SUHOOR"]):
-                # Default meal data if none provided
-                default_meals = {
-                    "SUHOOR": "Oatmeal (1 cup), Eggs (2 whole), Banana (1 medium)\nProtein: 20g | Carbs: 45g | Fats: 12g | Calories: 380",
-                    "IFTAR": "Chicken breast (4 oz), Brown rice (1 cup), Mixed veggies (1 cup)\nProtein: 35g | Carbs: 45g | Fats: 8g | Calories: 420",
-                    "POST-TARAWEEH": "Greek yogurt (1 cup), Mixed nuts (1 oz), Honey (1 tbsp)\nProtein: 18g | Carbs: 25g | Fats: 15g | Calories: 320"
-                }
 
-                meal_lines = section.split('\n')
-                for line in meal_lines:
-                    if ':' in line:
-                        meal_name = line.split(':')[0].strip().upper()
+                # Add Meals header
+                story.append(Paragraph("Meals", header_style))
+                story.append(Spacer(1, 12))
+
+                # Process meal sections or use defaults
+                found_meals = False
+                for section_part in sections:
+                    if any(meal_type in section_part.upper() for meal_type in ["SUHOOR", "IFTAR", "POST-TARAWEEH"]):
+                        found_meals = True
+                        meal_lines = section_part.split('\n')
+                        meal_name = meal_lines[0].strip().replace('###', '').replace('**', '')
+                        
                         story.append(Paragraph(meal_name, header_style))
                         
-                        meal_content = line.split(':', 1)[1].strip() if len(line.split(':', 1)) > 1 else ''
-                        if not meal_content and meal_name in default_meals:
-                            meal_content = default_meals[meal_name]
-                        
-                        # Split content and macros
-                        if '|' in meal_content:
-                            content, macros = meal_content.split('|', 1)
-                            story.append(Paragraph(content.strip(), body_style))
-                            story.append(Paragraph(macros.strip(), macro_style))
-                        else:
-                            story.append(Paragraph(meal_content, body_style))
+                        if len(meal_lines) > 1:
+                            items = meal_lines[1].strip()
+                            macros = meal_lines[2].strip() if len(meal_lines) > 2 else ""
+                            
+                            story.append(Paragraph(items, body_style))
+                            if macros:
+                                story.append(Paragraph(macros, macro_style))
                         story.append(Spacer(1, 12))
 
-        # Footer
+                # If no meals found in the text, use defaults
+                if not found_meals:
+                    for meal_name, meal_data in default_meals.items():
+                        story.append(Paragraph(meal_name, header_style))
+                        story.append(Paragraph(meal_data["items"], body_style))
+                        story.append(Paragraph(meal_data["macros"], macro_style))
+                        story.append(Spacer(1, 12))
+
+        # Add some space before footer
+        story.append(Spacer(1, 30))
+        
+        # Footer with italic style
         story.append(Paragraph("Feel free to ask questions about your meal plan!", footer_style))
 
         # Build PDF
