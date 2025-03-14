@@ -143,12 +143,19 @@ class AssistantManager:
 
         # Format the response
         sections = response.split('TAPS')
-        formatted_response = ("**RIFT Principles**\n" + sections[0].replace('RIFT', '').replace(':', '').strip() + 
-                            "\n\n**TAPS Overview**\n" + ('TAPS' + sections[1]).replace('Overview', '').replace(':', '').strip())
+        if len(sections) < 2:
+            # Fallback formatting if the response doesn't contain expected sections
+            formatted_response = response
+            if not formatted_response.count('- '):
+                formatted_response = '- ' + formatted_response.replace('\n', '\n- ').replace('- \n', '\n')
+            formatted_response = "**RIFT & TAPS Overview**\n" + formatted_response
+        else:
+            formatted_response = ("**RIFT Principles**\n" + sections[0].replace('RIFT', '').replace(':', '').strip() + 
+                                "\n\n**TAPS Overview**\n" + ('TAPS' + sections[1]).replace('Overview', '').replace(':', '').strip())
 
-        # Add bullet points if not present
-        if not formatted_response.count('- '):
-            formatted_response = formatted_response.replace('\n', '\n- ').replace('- \n', '\n')
+            # Add bullet points if not present
+            if not formatted_response.count('- '):
+                formatted_response = formatted_response.replace('\n', '\n- ').replace('- \n', '\n')
 
         logger.info(f"Formatted explanation sent: {formatted_response[:100]}...")
         return thread_id, formatted_response
