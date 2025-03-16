@@ -52,7 +52,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
             spaceAfter=20
         )
 
-        # Header style - royal blue background like in RIFT & TAPS
+        # Header style - royal blue background
         header_style = ParagraphStyle(
             'CustomHeader',
             parent=styles['Heading2'],
@@ -87,13 +87,14 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         story = []
 
         # Title and subtitle
-        story.append(Paragraph(f"RIFT & TAPS Ramadan Meal Plan", title_style))
+        story.append(Paragraph(f"Meal Plan for {username}", title_style))
         story.append(Spacer(1, 12))
-        story.append(Paragraph(f"Personalized plan for {username}", subtitle_style))
+        story.append(Paragraph("Based on your personal preferences and goals", subtitle_style))
         story.append(Spacer(1, 20))
 
         # Process meal plan text
         sections = meal_plan_text.split('\n\n')
+        current_section = None
 
         for section in sections:
             if not section.strip():
@@ -108,11 +109,14 @@ def generate_meal_plan_pdf(meal_plan_text, username):
 
             # Add section header
             header = lines[0].strip()
-            story.append(Paragraph(header, header_style))
-            story.append(Spacer(1, 8))
+
+            # Check if this is a meal section
+            meal_keywords = ["Meal", "Breakfast", "Lunch", "Dinner", "Snack", "Pre-workout", "Post-workout", "Suhoor", "Iftar"]
+            is_meal_section = any(keyword in header for keyword in meal_keywords)
 
             if "Total Macronutrients" in header:
-                # Create table for macronutrients
+                # Create macronutrients table
+                story.append(Paragraph(header, header_style))
                 table_data = []
                 for line in lines[1:]:
                     if ':' in line:
@@ -120,7 +124,6 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                         table_data.append([nutrient.strip(), amount.strip()])
 
                 if table_data:
-                    # Create table with equal column widths
                     table = Table(table_data, colWidths=[doc.width/2.5]*2)
                     table.setStyle(TableStyle([
                         ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -132,17 +135,29 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                         ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.lightgrey])
                     ]))
                     story.append(table)
-            else:
-                # Add meal content with macros on the same line
+            elif "Total Micronutrients" in header:
+                # Add micronutrients section
+                story.append(Paragraph(header, header_style))
                 for line in lines[1:]:
                     if line.strip():
-                        # For meal items, combine food and macros in a clean format
-                        if '|' in line:
-                            food, macros = line.split('|', 1)
+                        story.append(Paragraph(line.strip(), text_style))
+            elif is_meal_section:
+                # Create a new header for each meal section
+                meal_header = header.replace(":", "").strip()
+                story.append(Paragraph(meal_header, header_style))
+                for line in lines[1:]:
+                    if line.strip():
+                        content = line.strip()
+                        if '|' in content:
+                            food, macros = content.split('|', 1)
                             content = f"{food.strip()} ({macros.strip()})"
-                        else:
-                            content = line.strip()
                         story.append(Paragraph(content, text_style))
+            else:
+                # Add other sections with regular formatting
+                story.append(Paragraph(header, header_style))
+                for line in lines[1:]:
+                    if line.strip():
+                        story.append(Paragraph(line.strip(), text_style))
 
             story.append(Spacer(1, 12))
 

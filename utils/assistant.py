@@ -180,14 +180,21 @@ class AssistantManager:
 
         # Format user data for prompt
         user_info = "\n".join(f"{k}: {v}" for k, v in user_data.items())
-        prompt = f"Generate a personalized meal plan with format:\n"
-        prompt += "**Total Daily Macronutrients:**\n"
-        prompt += "- List macros with bullet points\n\n"
-        prompt += "**Meals:**\n"
-        prompt += "- List each meal with bullet points\n\n"
-        prompt += "**Total Micronutrients:**\n"
-        prompt += "- List micros with bullet points\n\n"
-        prompt += f"User Data:\n{user_info}"
+        prompt = (
+            f"Generate a personalized meal plan with these exact sections:\n\n"
+            f"**Total Daily Macronutrients:**\n"
+            f"- List protein, carbs, and fats\n\n"
+            f"**Suhoor - 45 min before Fajr:**\n"
+            f"- List items with portions and macros\n\n"
+            f"**Iftar - At Maghrib:**\n"
+            f"- List items with portions and macros\n\n"
+            f"**Post-Taraweeh:**\n"
+            f"- List items with portions and macros\n\n"
+            f"**Total Micronutrients:**\n"
+            f"- List essential vitamins and minerals\n\n"
+            f"User Data:\n{user_info}\n\n"
+            f"Important: Format each meal as a distinct section with its own header."
+        )
 
         response = await self._get_assistant_response(thread_id, prompt)
         return thread_id, response
