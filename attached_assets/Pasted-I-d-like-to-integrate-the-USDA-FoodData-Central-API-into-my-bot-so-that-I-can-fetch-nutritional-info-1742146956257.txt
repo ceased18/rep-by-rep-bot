@@ -1,0 +1,20 @@
+I’d like to integrate the USDA FoodData Central API into my bot so that I can fetch nutritional information (macros like Protein, Carbs, Fats, and Calories) for food items in the /mealplan command. Please do the following in my bot.py (or the relevant file):
+
+Store the API Key Securely:
+Ensure that my USDA API key is stored in Replit Secrets as USDA_API_KEY and retrieve it in the code using os.environ.get("USDA_API_KEY").
+Install and Import Dependencies:
+Make sure the requests library is installed (pip install requests) and import it at the top of the file.
+Create a Helper Function:
+Write a function called get_food_macros(food_name: str) -> dict that:
+Sends an HTTP GET request to the USDA FoodData Central API’s search endpoint (e.g., https://api.nal.usda.gov/fdc/v1/foods/search) using the API key and the food name as the query parameter.
+Parses the JSON response to extract nutritional data—specifically the macros: Protein, Carbs, Fats, and Calories. If multiple results are returned, choose the best match (or simply the first result).
+Returns a dictionary with keys like 'protein', 'carbs', 'fats', and 'calories' and their respective numeric values. If no data is found or an error occurs, return default placeholder values.
+Integrate with the /mealplan Command:
+In the code for /mealplan, for each food item in the meal plan, call get_food_macros(food_item_name) and include the fetched nutritional information (macros and calorie data) next to the food item in the PDF.
+Logging and Error Handling:
+Add console logging (e.g., print(f"Fetched macros for {food_name}: {result}")) to confirm the API call results.
+Ensure that any exceptions (like connection errors or invalid responses) are caught gracefully so the bot does not crash.
+Testing:
+Test the helper function by fetching data for a sample food (e.g., "apple" or "chicken breast") and printing the result.
+Then, run the /mealplan command in Discord and verify that the PDF includes the nutritional data for each food item.
+Let me know if any errors occur in the console, or confirm once the USDA API integration is working correctly.

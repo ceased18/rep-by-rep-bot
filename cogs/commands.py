@@ -6,6 +6,7 @@ from utils.message_utils import send_long_message
 from utils.pdf_generator import generate_meal_plan_pdf
 import asyncio
 import os
+from utils.usda_api import USDAFoodDataAPI
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,9 @@ class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.assistant = AssistantManager()
-        self.bot.thread_mappings = {}  # Initialize thread mapping
+        self.bot.thread_mappings = {}
+        self.usda_api = USDAFoodDataAPI()  # Initialize USDA API helper
+        logger.info("Commands cog initialized with USDA API integration")
 
     async def _get_or_create_thread(self, ctx, name):
         """Create a new thread or get existing one"""
@@ -157,25 +160,40 @@ class Commands(commands.Cog):
             }
 
             await thread.send("Generating your personalized meal plan... 🔄")
+            await thread.send("Fetching nutritional information from USDA database...")
 
             # Generate meal plan using Assistant
             openai_thread_id, meal_plan = await self.assistant.generate_meal_plan(user_data)
             self.bot.thread_mappings[thread.id] = openai_thread_id
 
+            # Add nutritional data to meal items
+            meal_lines = meal_plan.split('\n')
+            enhanced_meal_plan = []
+
+            for line in meal_lines:
+                if line.strip().startswith('- ') and ':' not in line:  # Food item line
+                    food_item = line.strip('- ').split('(')[0].strip()  # Extract food name
+                    macros = self.usda_api.get_food_macros(food_item)
+                    if macros:
+                        line = f"{line.strip()} {self.usda_api.format_macros(macros)}"
+                enhanced_meal_plan.append(line)
+
+            enriched_meal_plan = '\n'.join(enhanced_meal_plan)
+
             try:
-                # Generate PDF
-                pdf_path = generate_meal_plan_pdf(meal_plan, user_data['name'])
+                # Generate PDF with enriched meal plan
+                pdf_path = generate_meal_plan_pdf(enriched_meal_plan, user_data['name'])
                 await thread.send(file=discord.File(pdf_path))
                 os.remove(pdf_path)  # Clean up
 
                 # Send meal plan text and encourage questions
-                await send_long_message(thread, meal_plan)
+                await send_long_message(thread, enriched_meal_plan)
                 await thread.send("\nFeel free to ask questions about your meal plan! 🍽️")
 
             except Exception as pdf_error:
                 logger.error(f"Error generating PDF: {str(pdf_error)}")
                 await thread.send("I encountered an error generating the PDF. Here's your meal plan in text format:")
-                await send_long_message(thread, meal_plan)
+                await send_long_message(thread, enriched_meal_plan)
 
         except asyncio.TimeoutError:
             await thread.send("Response time exceeded. Please try again.")
