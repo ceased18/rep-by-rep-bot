@@ -21,7 +21,7 @@ async def send_long_message(channel, content):
             # Preserve single line breaks within paragraphs
             formatted_paragraph = paragraph.strip()
 
-            # Add spacing after headers
+            # Add minimal spacing after headers
             if formatted_paragraph.startswith('**') and formatted_paragraph.endswith('**'):
                 formatted_paragraph += '\n'
 
@@ -30,7 +30,7 @@ async def send_long_message(channel, content):
                 if current_message:
                     await channel.send(current_message)
                     logger.info(f"Sent message part (length: {len(current_message)})")
-                    current_message = formatted_paragraph + "\n\n"
+                    current_message = formatted_paragraph
                 else:
                     # Single paragraph too long, need to split carefully
                     chunks = math.ceil(len(formatted_paragraph) / 1900)
@@ -43,8 +43,14 @@ async def send_long_message(channel, content):
                         await channel.send(chunk)
                         logger.info(f"Sent chunk {i+1}/{chunks}")
             else:
-                if current_message and not current_message.endswith('\n\n'):
-                    current_message += '\n\n'
+                if current_message:
+                    # Add appropriate spacing based on content
+                    if formatted_paragraph.startswith('- ') or formatted_paragraph.startswith('• '):
+                        # Single line break for bullet points
+                        current_message += '\n'
+                    else:
+                        # Double line break for paragraphs
+                        current_message += '\n\n'
                 current_message += formatted_paragraph
 
         if current_message:
