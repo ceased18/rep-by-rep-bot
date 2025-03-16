@@ -31,25 +31,28 @@ class RamadanBot(commands.Bot):
             await self.load_extension("cogs.events")
             logger.info("Cogs loaded successfully")
 
-            # Sync commands
+            # Sync commands to Discord...
             logger.info("Syncing commands to Discord...")
             try:
                 synced = await self.tree.sync()
-                logger.info(f"Commands synced successfully. Synced {len(synced)} commands")
+                logger.info(f"Command registration status: updated (synced {len(synced)} commands)")
 
                 # Log each synced command
                 for command in synced:
                     logger.info(f"Synced command: {command.name}")
 
             except discord.HTTPException as e:
-                logger.error(f"Failed to sync commands: {str(e)}")
-                raise
+                if e.status == 429:  # Rate limit error
+                    logger.warning(f"Command registration status: rate-limited (retry after {e.retry_after} seconds)")
+                else:
+                    logger.error(f"Command registration status: failed (HTTP error {e.status})")
+                    raise
             except Exception as e:
-                logger.error(f"Unexpected error during command sync: {str(e)}")
+                logger.error(f"Command registration status: failed ({str(e)})")
                 raise
 
         except Exception as e:
-            logger.error("Failed to setup bot: %s", str(e))
+            logger.error(f"Failed to setup bot: {str(e)}")
             raise
 
     async def on_ready(self):
@@ -84,14 +87,29 @@ class RamadanBot(commands.Bot):
         """Global error handler"""
         logger.error(f"Error in {event_method}: ", exc_info=True)
 
-def main():
-    """Main entry point for bot"""
-    token = os.getenv('DISCORD_TOKEN')
-    if not token:
-        raise ValueError("DISCORD_TOKEN not found in environment variables")
+    async def on_connect(self):
+        """Called when the client connects to Discord"""
+        logger.info("Connected to Discord Gateway")
 
-    bot = RamadanBot()
-    bot.run(token)
+    async def on_disconnect(self):
+        """Called when the client disconnects from Discord"""
+        logger.warning("Disconnected from Discord Gateway")
+
+    async def on_resumed(self):
+        """Called when the client resumes a session"""
+        logger.info("Resumed Discord session")
 
 if __name__ == "__main__":
-    main()
+    try:
+        # Get environment variables
+        token = os.getenv('DISCORD_TOKEN')
+        if not token:
+            raise ValueError("DISCORD_TOKEN not found in environment variables")
+
+        # Create and run bot
+        bot = RamadanBot()
+        logger.info("Starting Discord bot...")
+        bot.run(token, log_handler=None)  # Disable discord.py's logging handler to avoid duplicates
+    except Exception as e:
+        logger.error(f"Bot crashed: {str(e)}")
+        raise
