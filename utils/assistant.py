@@ -22,7 +22,7 @@ class AssistantManager:
         logger.info("AssistantManager initialized successfully")
 
     def _sanitize_text(self, text):
-        """Sanitize text while preserving formatting"""
+        """Sanitize text while preserving minimal formatting"""
         try:
             if not text:
                 return ""
@@ -34,32 +34,41 @@ class AssistantManager:
             while '\n\n\n' in sanitized:
                 sanitized = sanitized.replace('\n\n\n', '\n\n')
 
-            # Process line by line for proper formatting
+            # Process line by line for minimal formatting
             lines = sanitized.split('\n')
             formatted_lines = []
             in_bullet_list = False
+            last_line_bullet = False
 
             for i, line in enumerate(lines):
                 stripped_line = line.strip()
+
                 # Handle headers
                 if stripped_line.startswith('**') and stripped_line.endswith('**'):
-                    if i > 0:  # Add blank line before header unless it's the first line
+                    # Add blank line before header if not the first line
+                    if i > 0 and formatted_lines:
                         formatted_lines.append('')
                     formatted_lines.append(stripped_line)
-                    formatted_lines.append('')  # Single blank line after header
-                # Handle bullet points
+                    # Single blank line after header
+                    formatted_lines.append('')
+                    last_line_bullet = False
+                # Handle bullet points with minimal spacing
                 elif stripped_line.startswith('- ') or stripped_line.startswith('• '):
-                    if not in_bullet_list and formatted_lines:
-                        formatted_lines.append('')  # Add space before first bullet
-                    formatted_lines.append(stripped_line)
-                    in_bullet_list = True
-                else:
-                    if in_bullet_list:  # End of bullet list
-                        formatted_lines.append('')
-                    formatted_lines.append(stripped_line)
-                    in_bullet_list = False
+                    if last_line_bullet:
+                        formatted_lines.append(stripped_line)
+                    else:
+                        formatted_lines.append(stripped_line)
+                        last_line_bullet = True
 
-            # Join lines and clean up any remaining multiple spaces
+                # Handle regular text
+                else:
+                    if last_line_bullet:
+                        formatted_lines.append('')
+                        last_line_bullet = False
+                    formatted_lines.append(stripped_line)
+
+
+            # Join lines and clean up
             sanitized = '\n'.join(line for line in formatted_lines if line is not None)
             sanitized = ' '.join(part for part in sanitized.split(' ') if part)
 
@@ -84,15 +93,15 @@ class AssistantManager:
                 time.sleep(1)
 
     async def _get_assistant_response(self, thread_id, prompt):
-        """Get response from the Assistant"""
+        """Get response from the Assistant with proper formatting"""
         try:
             start_time = time.time()
 
-            # Modify user message to encourage well-formatted responses
+            # Modify user message to encourage compact formatting
             user_message = (
-                "Please provide your response with appropriate formatting:\n"
-                "- Use bullet points for lists (one item per line)\n"
-                "- Add bold headers for sections\n"
+                "Please provide your response with minimal spacing:\n"
+                "- For bullet points, use single line breaks (no extra blank lines)\n"
+                "- For headings, add only one blank line before and after\n"
                 "- Keep responses concise and well-organized\n\n"
                 f"{prompt}"
             )
@@ -111,7 +120,7 @@ class AssistantManager:
                 assistant_id=self.assistant_id
             )
 
-            # Wait for completion with optimized polling
+            # Wait for completion
             timeout = 30
             poll_interval = 0.2
             max_poll_interval = 2.0
@@ -135,7 +144,7 @@ class AssistantManager:
                 await asyncio.sleep(poll_interval)
                 poll_interval = min(poll_interval * 1.5, max_poll_interval)
 
-            # Get and process the response
+            # Get messages and format response
             messages = self.client.beta.threads.messages.list(thread_id=thread_id)
             response = self._sanitize_text(messages.data[0].content[0].text.value)
 
@@ -152,12 +161,14 @@ class AssistantManager:
         thread_id = await self._create_thread()
         prompt = (
             "Explain the RIFT & TAPS methodology for Ramadan training.\n"
-            "Format the response as follows:\n"
-            "1. Start with '**RIFT Principles:**'\n"
-            "2. List each RIFT principle with bullet points\n"
-            "3. Follow with '**TAPS Overview:**'\n"
-            "4. List each TAPS component with bullet points\n"
-            "Keep the format clean with single line breaks between bullet points."
+            "Use this exact format:\n"
+            "**RIFT Principles:**\n"
+            "- List each principle with bullet points\n"
+            "- Use a single line break between points\n\n"
+            "**TAPS Overview:**\n"
+            "- List each component with bullet points\n"
+            "- Use a single line break between points\n\n"
+            "Important: Use only single line breaks between bullet points, no extra spacing."
         )
         response = await self._get_assistant_response(thread_id, prompt)
         return thread_id, response

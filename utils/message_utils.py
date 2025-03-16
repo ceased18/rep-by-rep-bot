@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 async def send_long_message(channel, content):
     """
     Send a message that might exceed Discord's 2000 character limit.
-    Splits into multiple messages if needed, preserving formatting.
+    Splits into multiple messages if needed, preserving minimal formatting.
     """
     try:
         if len(content) <= 2000:
@@ -18,12 +18,8 @@ async def send_long_message(channel, content):
         current_message = ""
 
         for paragraph in paragraphs:
-            # Preserve single line breaks within paragraphs
+            # Clean up paragraph formatting
             formatted_paragraph = paragraph.strip()
-
-            # Add minimal spacing after headers
-            if formatted_paragraph.startswith('**') and formatted_paragraph.endswith('**'):
-                formatted_paragraph += '\n'
 
             # Check if adding this paragraph would exceed limit
             if len(current_message) + len(formatted_paragraph) + 2 > 1900:
@@ -44,12 +40,17 @@ async def send_long_message(channel, content):
                         logger.info(f"Sent chunk {i+1}/{chunks}")
             else:
                 if current_message:
-                    # Add appropriate spacing based on content
-                    if formatted_paragraph.startswith('- ') or formatted_paragraph.startswith('• '):
-                        # Single line break for bullet points
+                    is_bullet = formatted_paragraph.strip().startswith(('- ', '• '))
+                    prev_was_bullet = current_message.strip().endswith(('- ', '• ')) or \
+                                    any(line.strip().startswith(('- ', '• ')) for line in current_message.split('\n')[-2:])
+                    if formatted_paragraph.startswith('**') and formatted_paragraph.endswith('**'):
+                        # Add a blank line before headers
+                        current_message += '\n\n'
+                    elif is_bullet and prev_was_bullet:
+                        # Only a single line break between consecutive bullets
                         current_message += '\n'
                     else:
-                        # Double line break for paragraphs
+                        # Normal paragraph spacing
                         current_message += '\n\n'
                 current_message += formatted_paragraph
 
