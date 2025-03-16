@@ -37,5 +37,5 @@ if __name__ == "__main__":
     bot_thread.start()
     logger.info("Bot thread started")
 
-    # Start Flask app
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Start Flask app with debug disabled to avoid threading issues
+    app.run(host='0.0.0.0', port=5000, debug=False)

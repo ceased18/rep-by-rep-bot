@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 # Bot configuration
 intents = discord.Intents.all()  # Using all intents for proper functionality
 
-
 class RamadanBot(commands.Bot):
     def __init__(self):
         super().__init__(
@@ -32,38 +31,22 @@ class RamadanBot(commands.Bot):
             await self.load_extension("cogs.events")
             logger.info("Cogs loaded successfully")
 
-            # Sync commands with retry logic
+            # Sync commands
             logger.info("Syncing commands to Discord...")
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    synced = await self.tree.sync()
-                    logger.info(f"Commands synced successfully. Synced {len(synced)} commands")
+            try:
+                synced = await self.tree.sync()
+                logger.info(f"Commands synced successfully. Synced {len(synced)} commands")
 
-                    # Log each synced command
-                    for command in synced:
-                        logger.info(f"Synced command: {command.name}")
+                # Log each synced command
+                for command in synced:
+                    logger.info(f"Synced command: {command.name}")
 
-                    break
-                except discord.HTTPException as e:
-                    if e.status == 429:  # Rate limit
-                        if attempt < max_retries - 1:
-                            retry_after = e.retry_after
-                            logger.warning(f"Rate limited, retrying in {retry_after} seconds...")
-                            await asyncio.sleep(retry_after)
-                            continue
-                    logger.error(f"HTTP error during sync: {e.status} - {e.text}")
-                    raise
-                except Exception as e:
-                    logger.error(f"Error syncing commands (attempt {attempt + 1}/{max_retries}): {e}")
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(5)
-                        continue
-                    raise
-
-            # Verify commands are registered
-            commands = self.tree.get_commands()
-            logger.info(f"Available commands after sync: {[cmd.name for cmd in commands]}")
+            except discord.HTTPException as e:
+                logger.error(f"Failed to sync commands: {str(e)}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error during command sync: {str(e)}")
+                raise
 
         except Exception as e:
             logger.error("Failed to setup bot: %s", str(e))
@@ -96,6 +79,10 @@ class RamadanBot(commands.Bot):
             scopes=["bot", "applications.commands"]
         )
         logger.info(f'Invite link: {invite_link}')
+
+    async def on_error(self, event_method: str, *args, **kwargs):
+        """Global error handler"""
+        logger.error(f"Error in {event_method}: ", exc_info=True)
 
 def main():
     """Main entry point for bot"""
