@@ -183,17 +183,23 @@ class AssistantManager:
         prompt = (
             f"Generate a personalized meal plan with these exact sections:\n\n"
             f"**Total Daily Macronutrients:**\n"
-            f"- List protein, carbs, and fats\n\n"
+            f"- List protein, carbs, and fats with target amounts\n\n"
             f"**Suhoor - 45 min before Fajr:**\n"
-            f"- List items with portions and macros\n\n"
+            f"- List each food item with exact serving size (e.g., '3 large eggs', '2 slices bread')\n"
+            f"- Include portion weights where relevant (e.g., '6 oz chicken breast')\n\n"
             f"**Iftar - At Maghrib:**\n"
-            f"- List items with portions and macros\n\n"
+            f"- List each food item with exact serving size\n"
+            f"- Include portion weights where relevant\n\n"
             f"**Post-Taraweeh:**\n"
-            f"- List items with portions and macros\n\n"
+            f"- List each food item with exact serving size\n"
+            f"- Include portion weights where relevant\n\n"
             f"**Total Micronutrients:**\n"
             f"- List essential vitamins and minerals\n\n"
             f"User Data:\n{user_info}\n\n"
-            f"Important: Format each meal as a distinct section with its own header."
+            f"Important:\n"
+            f"1. Format each meal as a distinct section with its own header\n"
+            f"2. Each food item should be on its own line starting with '-'\n"
+            f"3. Include specific quantities for all items\n"
         )
 
         response = await self._get_assistant_response(thread_id, prompt)

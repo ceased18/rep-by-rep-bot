@@ -89,4 +89,4 @@ class USDAFoodDataAPI:
         """Format macronutrient data into a readable string"""
         if not macros:
             return "(Nutrition data unavailable)"
-        return f"(P: {macros['protein']}g, C: {macros['carbs']}g, F: {macros['fats']}g, Cal: {macros['calories']})"
+        return f"(Protein: {macros['protein']}g, Carbs: {macros['carbs']}g, Fats: {macros['fats']}g, Calories: {macros['calories']})"
