@@ -22,26 +22,40 @@ class AssistantManager:
         logger.info("AssistantManager initialized successfully")
 
     def _sanitize_text(self, text):
-        """Remove all non-printable ASCII characters and sanitize text for API calls"""
+        """Sanitize text while preserving formatting"""
         try:
-            # Handle None or empty string
             if not text:
                 return ""
 
-            # First replace common problematic characters
-            sanitized = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+            # Replace common problematic characters while preserving line breaks
+            sanitized = text.replace('\r', '\n')
 
-            # Remove any remaining non-printable ASCII characters
-            sanitized = ''.join(char for char in sanitized if ord(char) >= 32 and ord(char) <= 126)
+            # Collapse multiple newlines to maximum of two
+            while '\n\n\n' in sanitized:
+                sanitized = sanitized.replace('\n\n\n', '\n\n')
+
+            # Ensure proper spacing around bold headers
+            lines = sanitized.split('\n')
+            formatted_lines = []
+            for i, line in enumerate(lines):
+                if line.strip().startswith('**') and line.strip().endswith('**'):
+                    # Add blank line before header if it's not the first line
+                    if i > 0 and formatted_lines and not formatted_lines[-1].isspace():
+                        formatted_lines.append('')
+                    formatted_lines.append(line)
+                    formatted_lines.append('')  # Add blank line after header
+                else:
+                    formatted_lines.append(line)
+
+            sanitized = '\n'.join(formatted_lines)
 
             # Collapse multiple spaces
-            sanitized = ' '.join(sanitized.split())
+            sanitized = ' '.join(part for part in sanitized.split(' ') if part)
 
-            logger.debug(f"Sanitized text for OpenAI: {sanitized[:100]}...")
+            logger.debug(f"Sanitized text, preserving formatting")
             return sanitized
         except Exception as e:
             logger.error(f"Error sanitizing text: {str(e)}")
-            # Return a safe default if sanitization fails
             return "Error processing message"
 
     async def _create_thread(self):
@@ -64,10 +78,10 @@ class AssistantManager:
         try:
             start_time = time.time()
 
-            # Sanitize user message before sending
+            # Modify user message to encourage formatted responses
             user_message = (
-                "Please provide a concise response under 1000 characters. "
-                "Focus on key points only.\n\n"
+                "Please provide a well-formatted response with appropriate spacing. "
+                "Use bullet points for lists and include blank lines between sections.\n\n"
                 f"{prompt}"
             )
             sanitized_message = self._sanitize_text(user_message)
@@ -113,9 +127,19 @@ class AssistantManager:
                 await asyncio.sleep(poll_interval)
                 poll_interval = min(poll_interval * 1.5, max_poll_interval)
 
-            # Get messages and sanitize response
+            # Get messages and sanitize response while preserving formatting
             messages = self.client.beta.threads.messages.list(thread_id=thread_id)
             response = self._sanitize_text(messages.data[0].content[0].text.value)
+
+            # Format bullet points if response contains lists
+            if '- ' in response or '• ' in response:
+                lines = response.split('\n')
+                formatted_lines = []
+                for line in lines:
+                    if line.strip().startswith('- ') or line.strip().startswith('• '):
+                        formatted_lines.append('')  # Add space before list item
+                    formatted_lines.append(line)
+                response = '\n'.join(formatted_lines)
 
             # Log processing time
             processing_time = time.time() - start_time
