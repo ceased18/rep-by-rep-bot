@@ -83,15 +83,15 @@ class Commands(commands.Cog):
         try:
             # Send initial questions
             initial_questions = ("Let's create your personalized meal plan 📝\n"
-                               "Answer these and separate by a comma:\n"
-                               "- Name\n"
-                               "- Gender (male/female)\n"
-                               "- Age\n"
-                               "- Weight (lbs)\n"
-                               "- Height (ft'in ex. 5'10)\n"
-                               "- Goal (cut/bulk/maintain)\n"
-                               "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
-                               "- Allergies?")
+                                "Answer these and separate by a comma:\n"
+                                "- Name\n"
+                                "- Gender (male/female)\n"
+                                "- Age\n"
+                                "- Weight (lbs)\n"
+                                "- Height (ft'in ex. 5'10)\n"
+                                "- Goal (cut/bulk/maintain)\n"
+                                "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
+                                "- Allergies?")
             await thread.send(initial_questions)
             await ctx.send(f"Created a thread for your meal plan! Check {thread.mention}")
 
@@ -189,11 +189,15 @@ class Commands(commands.Cog):
     )
     async def ask(self, ctx, *, question: str):
         await ctx.defer()
-        thread = await self._get_or_create_thread(ctx, f"Question from {ctx.author.name}")
+        # Create single thread with proper name
+        thread_name = f"Question from {ctx.author.name}"
+        thread = await self._get_or_create_thread(ctx, thread_name)
+        logger.info(f"Created question thread: {thread_name}")
 
         # Send welcome message with question and emoji
         await thread.send(f"Let's answer your question: **{question}** ❓")
         await thread.send("Here's what I found based on Team Akib's guide...")
+        await ctx.send(f"Created a thread for your question. Check {thread.mention}! 🤔")
 
         # Get and store response for real-time chat
         openai_thread_id, response = await self.assistant.ask_question(question)
@@ -209,7 +213,7 @@ class Commands(commands.Cog):
 
         await send_long_message(thread, response)
         await thread.send("\nFeel free to ask follow-up questions! I'm here to help! 💪")
-        await ctx.send(f"Created a thread for your question. Check {thread.mention}! 🤔")
+
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
