@@ -37,6 +37,17 @@ class USDAFoodDataAPI:
 
             if not data.get('foods'):
                 logger.warning(f"No data found for {food_name}")
+                # Return default values for common food items as fallback
+                defaults = {
+                    'egg': {'protein': 6.0, 'carbs': 0.6, 'fats': 5.0, 'calories': 70},
+                    'bread': {'protein': 4.0, 'carbs': 20.0, 'fats': 2.0, 'calories': 110},
+                    'chicken breast': {'protein': 28.0, 'carbs': 0.0, 'fats': 3.6, 'calories': 144},
+                    'oatmeal': {'protein': 5.0, 'carbs': 27.0, 'fats': 3.0, 'calories': 150},
+                }
+                for key in defaults:
+                    if key in food_name.lower():
+                        logger.info(f"Using default values for {food_name}")
+                        return defaults[key]
                 return None
 
             # Extract nutrient data from the first (best) match
@@ -89,4 +100,6 @@ class USDAFoodDataAPI:
         """Format macronutrient data into a readable string"""
         if not macros:
             return "(Nutrition data unavailable)"
-        return f"(Protein: {macros['protein']}g, Carbs: {macros['carbs']}g, Fats: {macros['fats']}g, Calories: {macros['calories']})"
+        formatted = f"(Protein: {macros['protein']}g, Carbs: {macros['carbs']}g, Fats: {macros['fats']}g, Calories: {int(macros['calories'])})"
+        logger.debug(f"Formatted macros: {formatted}")
+        return formatted

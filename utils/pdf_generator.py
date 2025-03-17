@@ -74,6 +74,18 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 alignment=0  # Left alignment
             )
 
+            # Meal totals style - slightly emphasized
+            totals_style = ParagraphStyle(
+                'MealTotals',
+                parent=styles['Normal'],
+                fontSize=11,
+                leading=14,
+                spaceAfter=12,
+                alignment=0,  # Left alignment
+                textColor=colors.HexColor('#4169E1'),  # Royal Blue
+                fontName='Helvetica-Bold'
+            )
+
             # Footer style - italic
             footer_style = ParagraphStyle(
                 'CustomFooter',
@@ -94,7 +106,6 @@ def generate_meal_plan_pdf(meal_plan_text, username):
 
             # Process meal plan text
             sections = meal_plan_text.split('\n\n')
-            current_section = None
 
             for section in sections:
                 if not section.strip():
@@ -145,18 +156,55 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                     # Create a new header for each meal section
                     meal_header = header.replace(":", "").strip()
                     story.append(Paragraph(meal_header, header_style))
+
+                    # Process meal items and collect macro totals
+                    meal_protein = 0.0
+                    meal_carbs = 0.0
+                    meal_fats = 0.0
+                    meal_calories = 0.0
+
+                    # Add food items
                     for line in lines[1:]:
                         if line.strip():
                             content = line.strip()
+                            if "Meal Totals:" in content:
+                                continue  # Skip existing totals line if present
+
                             # Format food items with their macros
-                            parts = content.split('(')
-                            if len(parts) > 1:
-                                food_item = parts[0].strip('- ').strip()
-                                macros = '(' + parts[1].strip()
+                            if '(' in content:
+                                food_item = content.split('(')[0].strip('- ').strip()
+                                macros = content[content.find('('):]
+
+                                # Extract macro values if present
+                                try:
+                                    if 'Protein:' in macros:
+                                        protein = float(macros.split('Protein:')[1].split('g')[0].strip())
+                                        meal_protein += protein
+                                    if 'Carbs:' in macros:
+                                        carbs = float(macros.split('Carbs:')[1].split('g')[0].strip())
+                                        meal_carbs += carbs
+                                    if 'Fats:' in macros:
+                                        fats = float(macros.split('Fats:')[1].split('g')[0].strip())
+                                        meal_fats += fats
+                                    if 'Calories:' in macros:
+                                        calories = float(macros.split('Calories:')[1].split(')')[0].strip())
+                                        meal_calories += calories
+                                except Exception as e:
+                                    logger.warning(f"Could not parse macros from line: {content}")
+
                                 content = f"• {food_item} {macros}"
                             else:
                                 content = f"• {content.strip('- ')}"
+
                             story.append(Paragraph(content, text_style))
+
+                    # Add meal totals
+                    story.append(Spacer(1, 8))
+                    meal_totals = (f"Meal Totals: Protein: {meal_protein:.1f}g, "
+                                f"Carbs: {meal_carbs:.1f}g, "
+                                f"Fats: {meal_fats:.1f}g, "
+                                f"Calories: {meal_calories:.0f}")
+                    story.append(Paragraph(meal_totals, totals_style))
                 else:
                     # Add other sections with regular formatting
                     story.append(Paragraph(header, header_style))
