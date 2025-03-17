@@ -1,0 +1,35 @@
+My /mealplan PDF output has several major formatting and calculation issues. Here’s what needs fixing:
+
+Repeated “Total Daily Macronutrients”:
+Right now, the PDF shows multiple “Total Daily Macronutrients” headers at the top.
+I only want one such header (e.g., “Energy Summary” or “Total Daily Macros”) at the top, listing the overall daily protein, carbs, fats, and total calories.
+Zeroed-Out Meal Totals:
+Each meal section shows “Meal Totals: 0.0g, 0.0g, 0.0g,” etc., even though food items clearly have macros.
+Make sure the code sums the item-level macros for each meal (protein, carbs, fats, and calories) and displays the correct totals, not zero.
+Inconsistent Headings and Extra Headers:
+Some items (like “8 oz chicken breast, cooked”) appear as a blue header instead of a normal line item.
+Only the meal names (e.g., “Suhoor - 45 min before Fajr,” “Iftar - At Maghrib,” “Post-Taraweeh”) should be blue headers, not individual foods.
+All other foods belong in the normal text lines below each meal header.
+Wrong Macro Calculations:
+The code is spitting out illogical macros (e.g., 224g protein for a 160-lb cutting goal, or repeated placeholders).
+The instructions for cutting (400–1300 cal deficit) aren’t actually being applied.
+Make sure the code uses the user’s stats (160 lbs, cutting, etc.) to produce a realistic daily calorie target and macros.
+Apply the correct math so the total daily macros align with the meal-by-meal breakdown.
+Double Meal Totals Sections:
+After each meal, I see lines like “Meal Totals” repeated or leftover placeholders.
+I only want one clear “Meal Totals” line at the end of each meal section, containing the sum of that meal’s items.
+Energy Summary at the End or the Top:
+Decide on one location (usually the top) for an “Energy Summary” that shows total daily macros (Protein, Carbs, Fats, Calories).
+At the bottom, you can display “Highlighted Nutrients” or “Total Micronutrients.”
+Make sure they are not repeated or zeroed out.
+Micronutrients
+The PDF sometimes shows “Iron: Data not available,” then “Iron: 15 mg” right after.
+If we can’t fetch certain micronutrients from the API, show a single placeholder line (e.g., “Data not available”). If we do have data, show the numeric value once.
+Ensure we don’t display contradictory or duplicate info.
+Please clean up the code so that:
+
+We have one clear daily macro summary (top of PDF).
+Each meal is listed with a blue header for the meal name, item-level macros in normal text, and one correct “Meal Totals” line.
+The daily macros and meal macros are calculated properly (especially for cutting).
+The micronutrient data is shown once without duplicates.
+Let me know if any console errors appear, and confirm once the PDF output is neat and consistent.

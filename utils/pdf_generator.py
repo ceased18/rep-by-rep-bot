@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 def generate_meal_plan_pdf(meal_plan_text, username):
     """Generate a professional PDF meal plan document"""
     logger.info(f"Starting meal plan PDF generation for {username}")
+    logger.debug("Parsing meal plan text sections...")
 
     try:
         # Create temporary file
@@ -18,6 +19,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f'_{pdf_name}')
         pdf_path = temp_file.name
         temp_file.close()
+        logger.debug(f"Created temporary file: {pdf_path}")
 
         # Create the PDF document
         doc = SimpleDocTemplate(
@@ -220,9 +222,9 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 if meal_protein > 0 or meal_carbs > 0 or meal_fats > 0 or meal_calories > 0:
                     story.append(Spacer(1, 8))
                     meal_totals = (f"Meal Totals: Protein: {meal_protein:.1f}g, "
-                                f"Carbs: {meal_carbs:.1f}g, "
-                                f"Fats: {meal_fats:.1f}g, "
-                                f"Calories: {meal_calories:.0f}")
+                                   f"Carbs: {meal_carbs:.1f}g, "
+                                   f"Fats: {meal_fats:.1f}g, "
+                                   f"Calories: {meal_calories:.0f}")
                     story.append(Paragraph(meal_totals, totals_style))
                     story.append(Spacer(1, 12))
 
@@ -331,6 +333,11 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         # Generate PDF
         doc.build(story)
         logger.info(f"PDF generation completed successfully for {username}")
+        logger.debug("Generated PDF with following sections:")
+        logger.debug("- Meal sections with blue headers")
+        logger.debug("- Food items with formatted macros")
+        logger.debug("- Energy Summary table")
+        logger.debug("- Highlighted Nutrients section")
         return pdf_path
 
     except Exception as e:
@@ -338,6 +345,7 @@ def generate_meal_plan_pdf(meal_plan_text, username):
         if 'pdf_path' in locals() and os.path.exists(pdf_path):
             try:
                 os.remove(pdf_path)
+                logger.debug("Cleaned up temporary PDF file")
             except Exception as cleanup_error:
                 logger.warning(f"Failed to clean up temporary file: {str(cleanup_error)}")
         raise
