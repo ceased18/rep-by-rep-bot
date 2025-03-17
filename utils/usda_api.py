@@ -43,6 +43,14 @@ class USDAFoodDataAPI:
                     'bread': {'protein': 4.0, 'carbs': 20.0, 'fats': 2.0, 'calories': 110},
                     'chicken breast': {'protein': 28.0, 'carbs': 0.0, 'fats': 3.6, 'calories': 144},
                     'oatmeal': {'protein': 5.0, 'carbs': 27.0, 'fats': 3.0, 'calories': 150},
+                    'rice': {'protein': 4.3, 'carbs': 45.0, 'fats': 0.4, 'calories': 205},
+                    'milk': {'protein': 3.4, 'carbs': 5.0, 'fats': 3.6, 'calories': 65},
+                    'yogurt': {'protein': 10.0, 'carbs': 4.0, 'fats': 0.4, 'calories': 59},
+                    'banana': {'protein': 1.1, 'carbs': 27.0, 'fats': 0.3, 'calories': 105},
+                    'apple': {'protein': 0.3, 'carbs': 25.0, 'fats': 0.2, 'calories': 95},
+                    'dates': {'protein': 2.5, 'carbs': 75.0, 'fats': 0.4, 'calories': 282},
+                    'almonds': {'protein': 21.0, 'carbs': 22.0, 'fats': 49.0, 'calories': 579},
+                    'protein powder': {'protein': 24.0, 'carbs': 3.0, 'fats': 1.5, 'calories': 120}
                 }
                 for key in defaults:
                     if key in food_name.lower():

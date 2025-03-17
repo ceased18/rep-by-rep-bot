@@ -160,60 +160,72 @@ class AssistantManager:
         gender = user_data['gender'].lower()
         goal = user_data['goal'].lower()
 
-        # Create detailed prompt with nutritional guidelines
+        # Internal calculation context - not shown to user
+        calculation_context = """
+        Internal calculations (not for display):
+        1. BMR Calculation:
+           Male: 88.362 + (13.397 × weight_kg) + (4.799 × height_cm) - (5.677 × age)
+           Female: 447.593 + (9.247 × weight_kg) + (3.098 × height_cm) - (4.330 × age)
+
+        2. Activity Multipliers:
+           Sedentary: 1.2
+           Light: 1.375
+           Moderate: 1.55
+           Very Active: 1.725
+           Extra Active: 1.9
+
+        3. Goal-based Adjustments:
+           Cutting:
+           - If BF > 25%(M)/35%(F): 0.8-0.9g protein/lb
+           - Otherwise: 1.1-1.5g protein/lb
+           - Fats: 0.3-0.4g/lb
+           - Deficit: 400-1300 below TDEE
+
+           Bulking:
+           - Protein: 0.9-1.35g/lb
+           - Fats: 0.3-0.4g/lb
+           - Surplus: 150-300 above TDEE
+
+           Maintenance:
+           - Protein: 1.0-1.2g/lb
+           - Fats: 0.3-0.4g/lb
+           - At TDEE
+
+        4. Carb calculation:
+           Remaining calories ÷ 4 = Carb grams
+        """
+
+        # Output-focused prompt
         prompt = (
-            f"Generate a personalized meal plan with comprehensive nutritional calculations and guidelines.\n\n"
-            f"Calculate BMR using:\n"
-            f"{'Male: 88.362 + (13.397 × weight in kg) + (4.799 × height in cm) - (5.677 × age)' if gender == 'male' else 'Female: 447.593 + (9.247 × weight in kg) + (3.098 × height in cm) - (4.330 × age)'}\n\n"
-            "Adjust BMR with activity multiplier:\n"
-            "- Sedentary (little/no exercise): 1.2\n"
-            "- Lightly active (1-3 days/week): 1.375\n"
-            "- Moderately active (3-5 days/week): 1.55\n"
-            "- Very active (6-7 days/week): 1.725\n"
-            "- Extra active (very intense exercise/sports): 1.9\n\n"
-            f"For {goal} goal, use these macro guidelines:\n"
-            "Cutting:\n"
-            "- If body fat > 25% (male) or > 35% (female): 0.8-0.9g protein per pound\n"
-            "- Otherwise: 1.1-1.5g protein per pound\n"
-            "- Fats: 0.3-0.4g per pound\n"
-            "- Calories: 400-1300 below TDEE\n"
-            "Bulking:\n"
-            "- Protein: 0.9-1.35g per pound\n"
-            "- Fats: 0.3-0.4g per pound\n"
-            "- Calories: 150-300 above TDEE\n"
-            "Maintenance:\n"
-            "- Protein: 1.0-1.2g per pound\n"
-            "- Fats: 0.3-0.4g per pound\n"
-            "- Calories: At TDEE\n"
-            "Remaining calories go to carbohydrates (4 calories per gram)\n\n"
-            "Format the meal plan with these exact sections:\n\n"
+            f"Generate a personalized meal plan showing only the final calculated values. Use this exact format:\n\n"
             "**Total Daily Macronutrients:**\n"
-            "- Calculate and list target protein, carbs, and fats based on above formulas\n"
-            "- Show daily calorie target\n\n"
+            "- Show target protein, carbs, fats with exact amounts\n"
+            "- Display daily calorie target as 'Target: X calories'\n\n"
             "**Suhoor - 45 min before Fajr:**\n"
-            "- Focus on slow-digesting proteins and complex carbs\n"
-            "- List each food item with exact serving size\n"
-            "- Include portion weights\n"
-            "- End with 'Meal Totals' line\n\n"
+            "- List foods with exact portions\n"
+            "- Include macros for each item\n"
+            "- End with 'Meal Totals'\n\n"
             "**Iftar - At Maghrib:**\n"
-            "- Start with easily digestible foods\n"
-            "- Include lean proteins and complex carbs\n"
-            "- List specific portions\n"
-            "- End with 'Meal Totals' line\n\n"
+            "- List foods with exact portions\n"
+            "- Include macros for each item\n"
+            "- End with 'Meal Totals'\n\n"
             "**Post-Taraweeh:**\n"
-            "- Focus on protein synthesis and recovery\n"
-            "- Keep meals simple and quick to prepare\n"
-            "- Include portion sizes\n"
-            "- End with 'Meal Totals' line\n\n"
+            "- List foods with exact portions\n"
+            "- Include macros for each item\n"
+            "- End with 'Meal Totals'\n\n"
             "**Total Micronutrients:**\n"
-            "- Estimate based on food choices\n"
-            "- Include: Vitamin A, Vitamin C, Calcium, Iron, others\n"
-            "- Show typical values (e.g., 100g broccoli: 89mg Vitamin C)\n"
-            "- Include electrolyte recommendations\n\n"
+            "Important: Format as 'Nutrient: Amount Unit':\n"
+            "Iron: X mg\n"
+            "Calcium: X mg\n"
+            "Vitamin A: X IU\n"
+            "Vitamin C: X mg\n"
+            "Vitamin B12: X mcg\n"
+            "Folate: X mcg\n"
+            "Potassium: X mg\n\n"
             "**Supplement Recommendations:**\n"
-            "- Timing for supplements\n"
-            "- Hydration guidelines (minimum 1.25 gallons per day)\n\n"
-            f"User Data:\n"
+            "- List supplement timing\n"
+            "- Include hydration guidelines\n\n"
+            f"User Metrics for Calculations:\n"
             f"Weight: {weight_lbs}lbs ({weight_kg:.1f}kg)\n"
             f"Height: {height_inches}in ({height_cm:.1f}cm)\n"
             f"Age: {age}\n"
@@ -222,21 +234,19 @@ class AssistantManager:
             f"Diet: {user_data['diet']}\n"
             f"Allergies: {user_data['allergies']}\n"
             f"Activity: {user_data['activity']}\n"
-            f"Job Demand: {user_data['job_demand']}\n"
+            f"Job: {user_data['job_demand']}\n"
             f"Duration: {user_data['duration']}\n"
             f"Experience: {user_data['experience']}\n"
             f"Schedule: {user_data['schedule']}\n"
-            f"Meals Count: {user_data['meals_count']}\n"
-            f"Body Fat %: {user_data['body_fat']}\n\n"
-            "Important Guidelines:\n"
-            "1. Each meal should take 30 minutes or less to prepare\n"
-            "2. Use accessible, budget-friendly ingredients\n"
-            "3. Account for dietary restrictions and preferences\n"
-            "4. Format each meal as a distinct section\n"
-            "5. List each food item on its own line with '-'\n"
-            "6. Include 'Meal Totals' after each meal section\n"
-            "7. Emphasize the importance of food weighing\n"
-            "8. Show all macros: 'Protein: Xg, Carbs: Yg, Fats: Zg, Calories: W'\n"
+            f"Meals: {user_data['meals_count']}\n"
+            f"Body Fat: {user_data['body_fat']}\n\n"
+            "Important:\n"
+            "1. Use the internal calculation guidelines but DO NOT show formulas in output\n"
+            "2. List each food item on a new line with '-'\n"
+            "3. Include exact portions\n"
+            "4. Show macros after each food item\n"
+            "5. Add 'Meal Totals' after each meal section\n"
+            f"\nInternal Context (not for display):\n{calculation_context}"
         )
 
         response = await self._get_assistant_response(thread_id, prompt)

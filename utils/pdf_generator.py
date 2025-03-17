@@ -106,6 +106,14 @@ def generate_meal_plan_pdf(meal_plan_text, username):
 
             # Process meal plan text
             sections = meal_plan_text.split('\n\n')
+            total_daily_calories = 0
+            total_daily_protein = 0
+            total_daily_carbs = 0
+            total_daily_fats = 0
+            target_calories = 0
+            target_protein = 0
+            target_carbs = 0
+            target_fats = 0
 
             for section in sections:
                 if not section.strip():
@@ -121,18 +129,35 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                 # Add section header
                 header = lines[0].strip()
 
-                # Check if this is a meal section
-                meal_keywords = ["Meal", "Breakfast", "Lunch", "Dinner", "Snack", "Pre-workout", "Post-workout", "Suhoor", "Iftar"]
-                is_meal_section = any(keyword in header for keyword in meal_keywords)
-
-                if "Total Macronutrients" in header:
-                    # Create macronutrients table
+                # Parse target macros from Total Daily Macronutrients section
+                if "Total Daily Macronutrients" in header:
                     story.append(Paragraph(header, header_style))
                     table_data = []
                     for line in lines[1:]:
                         if ':' in line:
                             nutrient, amount = line.split(':', 1)
                             table_data.append([nutrient.strip(), amount.strip()])
+                            # Extract target values
+                            if 'calories' in nutrient.lower():
+                                try:
+                                    target_calories = float(amount.split()[0])
+                                except:
+                                    pass
+                            elif 'protein' in nutrient.lower():
+                                try:
+                                    target_protein = float(amount.split()[0])
+                                except:
+                                    pass
+                            elif 'carbs' in nutrient.lower():
+                                try:
+                                    target_carbs = float(amount.split()[0])
+                                except:
+                                    pass
+                            elif 'fats' in nutrient.lower():
+                                try:
+                                    target_fats = float(amount.split()[0])
+                                except:
+                                    pass
 
                     if table_data:
                         table = Table(table_data, colWidths=[doc.width/2.5]*2)
@@ -146,13 +171,12 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                             ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.lightgrey])
                         ]))
                         story.append(table)
-                elif "Total Micronutrients" in header:
-                    # Add micronutrients section
-                    story.append(Paragraph(header, header_style))
-                    for line in lines[1:]:
-                        if line.strip():
-                            story.append(Paragraph(line.strip(), text_style))
-                elif is_meal_section:
+
+                # Check if this is a meal section
+                meal_keywords = ["Meal", "Breakfast", "Lunch", "Dinner", "Snack", "Pre-workout", "Post-workout", "Suhoor", "Iftar"]
+                is_meal_section = any(keyword in header for keyword in meal_keywords)
+
+                if is_meal_section:
                     # Create a new header for each meal section
                     meal_header = header.replace(":", "").strip()
                     story.append(Paragraph(meal_header, header_style))
@@ -205,6 +229,82 @@ def generate_meal_plan_pdf(meal_plan_text, username):
                                 f"Fats: {meal_fats:.1f}g, "
                                 f"Calories: {meal_calories:.0f}")
                     story.append(Paragraph(meal_totals, totals_style))
+
+                    # Add to daily totals
+                    total_daily_protein += meal_protein
+                    total_daily_carbs += meal_carbs
+                    total_daily_fats += meal_fats
+                    total_daily_calories += meal_calories
+
+                elif "Total Micronutrients" in header:
+                    # Add micronutrients section
+                    story.append(Paragraph(header, header_style))
+                    micronutrients = {}
+                    for line in lines[1:]:
+                        if ':' in line:
+                            nutrient, amount = line.split(':', 1)
+                            micronutrients[nutrient.strip()] = amount.strip()
+
+                    # Add Energy Summary section
+                    story.append(Spacer(1, 20))
+                    story.append(Paragraph("Energy Summary", header_style))
+
+                    # Calculate percentages of targets
+                    calorie_percent = (total_daily_calories / target_calories * 100) if target_calories > 0 else 0
+                    protein_percent = (total_daily_protein / target_protein * 100) if target_protein > 0 else 0
+                    carbs_percent = (total_daily_carbs / target_carbs * 100) if target_carbs > 0 else 0
+                    fats_percent = (total_daily_fats / target_fats * 100) if target_fats > 0 else 0
+
+                    # Format energy summary
+                    energy_summary = [
+                        f"Total Calories: {total_daily_calories:.0f} / {target_calories:.0f} kcal ({calorie_percent:.0f}%)",
+                        f"Protein: {total_daily_protein:.1f}g / {target_protein:.1f}g ({protein_percent:.0f}%)",
+                        f"Net Carbs: {total_daily_carbs:.1f}g / {target_carbs:.1f}g ({carbs_percent:.0f}%)",
+                        f"Fat: {total_daily_fats:.1f}g / {target_fats:.1f}g ({fats_percent:.0f}%)"
+                    ]
+
+                    for line in energy_summary:
+                        story.append(Paragraph(line, text_style))
+
+                    # Add Highlighted Nutrients section
+                    story.append(Spacer(1, 20))
+                    story.append(Paragraph("Highlighted Nutrients", header_style))
+
+                    # Define key nutrients to highlight
+                    key_nutrients = {
+                        'Iron': 'mg',
+                        'Calcium': 'mg',
+                        'Vitamin A': 'IU',
+                        'Vitamin C': 'mg',
+                        'Vitamin B12': 'mcg',
+                        'Folate': 'mcg',
+                        'Potassium': 'mg'
+                    }
+
+                    # Create a table for highlighted nutrients
+                    highlighted_data = []
+                    for nutrient, unit in key_nutrients.items():
+                        if nutrient in micronutrients:
+                            try:
+                                amount = micronutrients[nutrient].split()[0]
+                                highlighted_data.append([f"{nutrient}:", f"{amount} {unit}"])
+                            except:
+                                highlighted_data.append([f"{nutrient}:", "Data not available"])
+                        else:
+                            highlighted_data.append([f"{nutrient}:", "Data not available"])
+
+                    if highlighted_data:
+                        table = Table(highlighted_data, colWidths=[doc.width/2.5]*2)
+                        table.setStyle(TableStyle([
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                            ('FONTSIZE', (0, 0), (-1, -1), 11),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                            ('TOPPADDING', (0, 0), (-1, -1), 12),
+                            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.lightgrey])
+                        ]))
+                        story.append(table)
                 else:
                     # Add other sections with regular formatting
                     story.append(Paragraph(header, header_style))

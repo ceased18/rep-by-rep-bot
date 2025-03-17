@@ -170,11 +170,21 @@ class Commands(commands.Cog):
             meal_lines = meal_plan.split('\n')
             enhanced_meal_plan = []
 
+            # Track total nutritional values
+            total_protein = 0
+            total_carbs = 0
+            total_fats = 0
+            total_calories = 0
+
             for line in meal_lines:
                 if line.strip().startswith('- ') and ':' not in line:  # Food item line
                     food_item = line.strip('- ').split('(')[0].strip()  # Extract food name
                     macros = self.usda_api.get_food_macros(food_item)
                     if macros:
+                        total_protein += macros['protein']
+                        total_carbs += macros['carbs']
+                        total_fats += macros['fats']
+                        total_calories += macros['calories']
                         line = f"{line.strip()} {self.usda_api.format_macros(macros)}"
                 enhanced_meal_plan.append(line)
 
@@ -189,6 +199,16 @@ class Commands(commands.Cog):
                 # Send meal plan text and encourage questions
                 await send_long_message(thread, enriched_meal_plan)
                 await thread.send("\nFeel free to ask questions about your meal plan! 🍽️")
+
+                # Send summary of total nutrition
+                summary = (
+                    "📊 **Daily Nutrition Summary**\n"
+                    f"Total Calories: {total_calories:.0f}\n"
+                    f"Total Protein: {total_protein:.1f}g\n"
+                    f"Total Carbs: {total_carbs:.1f}g\n"
+                    f"Total Fats: {total_fats:.1f}g"
+                )
+                await thread.send(summary)
 
             except Exception as pdf_error:
                 logger.error(f"Error generating PDF: {str(pdf_error)}")
