@@ -7,6 +7,7 @@ from utils.pdf_generator import generate_meal_plan_pdf
 import asyncio
 import os
 from utils.usda_api import USDAFoodDataAPI
+from utils.open_food_facts_api import OpenFoodFactsAPI
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,9 @@ class Commands(commands.Cog):
         self.bot = bot
         self.assistant = AssistantManager()
         self.bot.thread_mappings = {}
-        self.usda_api = USDAFoodDataAPI()  # Initialize USDA API helper
-        logger.info("Commands cog initialized with USDA API integration")
+        self.usda_api = USDAFoodDataAPI()
+        self.off_api = OpenFoodFactsAPI()
+        logger.info("Commands cog initialized with USDA and Open Food Facts API integration")
 
     async def _get_or_create_thread(self, ctx, name):
         """Create a new thread or get existing one"""
@@ -86,15 +88,15 @@ class Commands(commands.Cog):
         try:
             # Send initial questions
             initial_questions = ("Let's create your personalized meal plan 📝\n"
-                                "Answer these and separate by a comma:\n"
-                                "- Name\n"
-                                "- Gender (male/female)\n"
-                                "- Age\n"
-                                "- Weight (lbs)\n"
-                                "- Height (ft'in ex. 5'10)\n"
-                                "- Goal (cut/bulk/maintain)\n"
-                                "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
-                                "- Allergies?")
+                             "Answer these and separate by a comma:\n"
+                             "- Name\n"
+                             "- Gender (male/female)\n"
+                             "- Age\n"
+                             "- Weight (lbs)\n"
+                             "- Height (ft'in ex. 5'10)\n"
+                             "- Goal (cut/bulk/maintain)\n"
+                             "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
+                             "- Allergies?")
             await thread.send(initial_questions)
             await ctx.send(f"Created a thread for your meal plan! Check {thread.mention}")
 
@@ -112,14 +114,14 @@ class Commands(commands.Cog):
 
             # Send follow-up questions
             followup_questions = ("Great! To make a really good meal plan can you also answer these:\n"
-                                "- Duration of meal plan in months for your goals (ex. 5 months)\n"
-                                "- Daily activity (ex. 10,000 steps or 30 mins cardio)\n"
-                                "- Job Physical Demand (Active or Sedentary)\n"
-                                "- Health conditions or eating disorders\n"
-                                "- Previous experience with meal plans? (yes or no)\n"
-                                "- Your schedule?\n"
-                                "- Number of meals you want?\n"
-                                "- Body Fat Percentage")
+                              "- Duration of meal plan in months for your goals (ex. 5 months)\n"
+                              "- Daily activity (ex. 10,000 steps or 30 mins cardio)\n"
+                              "- Job Physical Demand (Active or Sedentary)\n"
+                              "- Health conditions or eating disorders\n"
+                              "- Previous experience with meal plans? (yes or no)\n"
+                              "- Your schedule?\n"
+                              "- Number of meals you want?\n"
+                              "- Body Fat Percentage")
             await thread.send(followup_questions)
 
             # Get second response
@@ -160,7 +162,7 @@ class Commands(commands.Cog):
             }
 
             await thread.send("Generating your personalized meal plan... 🔄")
-            await thread.send("Fetching nutritional information from USDA database...")
+            await thread.send("Fetching nutritional information from USDA and Open Food Facts databases...")
 
             # Generate meal plan using Assistant
             openai_thread_id, meal_plan = await self.assistant.generate_meal_plan(user_data)
@@ -179,13 +181,22 @@ class Commands(commands.Cog):
             for line in meal_lines:
                 if line.strip().startswith('- ') and ':' not in line:  # Food item line
                     food_item = line.strip('- ').split('(')[0].strip()  # Extract food name
+
+                    # Get macros from USDA API
                     macros = self.usda_api.get_food_macros(food_item)
                     if macros:
                         total_protein += macros['protein']
                         total_carbs += macros['carbs']
                         total_fats += macros['fats']
                         total_calories += macros['calories']
-                        line = f"{line.strip()} {self.usda_api.format_macros(macros)}"
+
+                        # Get micronutrients from Open Food Facts API
+                        micros = self.off_api.get_micronutrients(food_item)
+                        if micros:
+                            line = f"{line.strip()} {self.usda_api.format_macros(macros)} {self.off_api.format_micronutrients(micros)}"
+                        else:
+                            line = f"{line.strip()} {self.usda_api.format_macros(macros)}"
+                    
                 enhanced_meal_plan.append(line)
 
             enriched_meal_plan = '\n'.join(enhanced_meal_plan)
