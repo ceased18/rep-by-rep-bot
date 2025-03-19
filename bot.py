@@ -1,8 +1,12 @@
 import os
+from dotenv import load_dotenv
 import logging
 import discord
 from discord.ext import commands
 import asyncio
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)  # Temporarily increase logging level

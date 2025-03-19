@@ -1,3 +1,6 @@
+# Environment variables
+.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -20,12 +23,22 @@ wheels/
 .installed.cfg
 *.egg
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Virtual Environment
+venv/
+ENV/
+env/
+.env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
 
 # Replit specific
 .replit
@@ -34,20 +47,6 @@ replit.nix
 .cache/
 .upm/
 .config/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Logs
-*.log
-
-# Local development
-venv/
-env/
-ENV/
 
 # Generated files
 *.pdf
