@@ -1,0 +1,17 @@
+name: Deploy to Replit
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to Replit
+        uses: replit/action-github-sync@v1
+        with:
+          REPLIT_TOKEN: ${{ secrets.REPLIT_TOKEN }}
+          REPL_ID: ${{ secrets.REPL_ID }} 

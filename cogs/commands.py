@@ -86,17 +86,19 @@ class Commands(commands.Cog):
         logger.info(f"Created meal plan thread: {thread_name}")
 
         try:
-            # Send initial questions
-            initial_questions = ("Let's create your personalized meal plan 📝\n"
-                             "Answer these and separate by a comma:\n"
-                             "- Name\n"
-                             "- Gender (male/female)\n"
-                             "- Age\n"
-                             "- Weight (lbs)\n"
-                             "- Height (ft'in ex. 5'10)\n"
-                             "- Goal (cut/bulk/maintain)\n"
-                             "- Dietary preferences (ex. halal, vegan, Mediterranean)\n"
-                             "- Allergies?")
+            # Step 1: Initial Information Collection
+            initial_questions = (
+                "Let's create your personalized meal plan 📝\n"
+                "Please provide the following information, separated by commas:\n"
+                "1. Name\n"
+                "2. Gender (male/female)\n"
+                "3. Age\n"
+                "4. Weight (lbs)\n"
+                "5. Height (ft'in or inches, e.g., 5'10 or 70)\n"
+                "6. Goal (cut/bulk/maintain)\n"
+                "7. Dietary preferences (e.g., halal, vegan, Mediterranean)\n"
+                "8. Allergies (if none, write 'none')"
+            )
             await thread.send(initial_questions)
             await ctx.send(f"Created a thread for your meal plan! Check {thread.mention}")
 
@@ -112,16 +114,19 @@ class Commands(commands.Cog):
                 await thread.send("Please provide all required information and separate by commas.")
                 return
 
-            # Send follow-up questions
-            followup_questions = ("Great! To make a really good meal plan can you also answer these:\n"
-                              "- Duration of meal plan in months for your goals (ex. 5 months)\n"
-                              "- Daily activity (ex. 10,000 steps or 30 mins cardio)\n"
-                              "- Job Physical Demand (Active or Sedentary)\n"
-                              "- Health conditions or eating disorders\n"
-                              "- Previous experience with meal plans? (yes or no)\n"
-                              "- Your schedule?\n"
-                              "- Number of meals you want?\n"
-                              "- Body Fat Percentage")
+            # Step 2: Additional Information Collection
+            followup_questions = (
+                "Great! Now let's get some additional details to make your meal plan more personalized:\n"
+                "Please provide the following, separated by commas:\n"
+                "1. Duration of meal plan in months\n"
+                "2. Daily activity level (e.g., sedentary, light, moderate, very active, extra active)\n"
+                "3. Job physical demand (sedentary/light/moderate/very active)\n"
+                "4. Health conditions (if none, write 'none')\n"
+                "5. Previous experience with meal plans (yes/no)\n"
+                "6. Schedule (e.g., 9-5, shift work, flexible)\n"
+                "7. Number of meals per day\n"
+                "8. Body fat percentage (if unknown, write 'unknown')"
+            )
             await thread.send(followup_questions)
 
             # Get second response
@@ -133,33 +138,64 @@ class Commands(commands.Cog):
                 await thread.send("Please provide all required information and separate by commas.")
                 return
 
-            # Convert height to inches
+            # Parse height to inches
             height = first_input[4]
-            if "'" in height:
-                ft, inches = height.split("'")
-                height_inches = int(ft) * 12 + int(inches.replace('"', ''))
-            else:
-                height_inches = int(height)
+            try:
+                height = str(height).strip()
+                if "'" in height:
+                    ft, inches = height.split("'")
+                    height_inches = int(ft.strip()) * 12 + int(inches.replace('"', '').strip())
+                else:
+                    height_inches = int(height)
+            except (ValueError, TypeError) as e:
+                logger.error(f"Error parsing height: {str(e)}")
+                await thread.send("Invalid height format. Please use format: 5'10 or just inches.")
+                return
 
             # Prepare user data
             user_data = {
                 'name': first_input[0],
-                'gender': first_input[1],
+                'gender': first_input[1].lower(),
                 'age': int(first_input[2]),
                 'weight': float(first_input[3]),
                 'height': height_inches,
-                'goal': first_input[5],
+                'goal': first_input[5].lower(),
                 'diet': first_input[6],
                 'allergies': first_input[7],
                 'duration': second_input[0],
-                'activity': second_input[1],
-                'job_demand': second_input[2],
+                'activity': second_input[1].lower(),
+                'job_demand': second_input[2].lower(),
                 'health_conditions': second_input[3],
-                'experience': second_input[4],
+                'experience': second_input[4].lower(),
                 'schedule': second_input[5],
-                'meals_count': second_input[6],
+                'meals_count': int(second_input[6]),
                 'body_fat': second_input[7]
             }
+
+            # Validate user data
+            if user_data['weight'] <= 0 or user_data['height'] <= 0 or user_data['age'] <= 0:
+                await thread.send("Invalid input values. Please provide valid numbers for weight, height, and age.")
+                return
+
+            if user_data['gender'] not in ['male', 'female']:
+                await thread.send("Invalid gender. Please specify 'male' or 'female'.")
+                return
+
+            if user_data['goal'] not in ['cut', 'bulk', 'maintain']:
+                await thread.send("Invalid goal. Please specify 'cut', 'bulk', or 'maintain'.")
+                return
+
+            if user_data['activity'] not in ['sedentary', 'light', 'moderate', 'very active', 'extra active']:
+                await thread.send("Invalid activity level. Please specify: sedentary, light, moderate, very active, or extra active.")
+                return
+
+            if user_data['job_demand'] not in ['sedentary', 'light', 'moderate', 'very active']:
+                await thread.send("Invalid job demand level. Please specify: sedentary, light, moderate, or very active.")
+                return
+
+            if user_data['meals_count'] < 1 or user_data['meals_count'] > 6:
+                await thread.send("Invalid number of meals. Please specify between 1 and 6 meals per day.")
+                return
 
             await thread.send("Generating your personalized meal plan... 🔄")
             await thread.send("Fetching nutritional information from USDA and Open Food Facts databases...")
